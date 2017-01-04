@@ -1,6 +1,7 @@
 package local;
 
 import data.Chunk;
+import data.SharedFile;
 import util.FileHelper;
 
 import java.io.BufferedInputStream;
@@ -52,8 +53,14 @@ public class ChunkSumService {
                     continue;
                 }
 
-                // todo: calculate checksum
-                threadPool.execute(() -> c.setChecksum(calculateChecksum(c)));
+                // calculate checksum
+                threadPool.execute(() -> {
+                    c.setChecksum(calculateChecksum(c));
+
+                    // update metadata observers
+                    SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(c.getFileId());
+                    sharedFile.notifyObservers(sharedFile.getMetadata());
+                });
             }
         });
         service.start();
@@ -70,8 +77,6 @@ public class ChunkSumService {
             log.log(Level.WARNING, String.format("File '%s' not found!", filePath), e);
             return null;
         }
-
-        Chunk chunk = null;
 
         // calculate chunk checksum
         String checksum;

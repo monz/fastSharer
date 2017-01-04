@@ -2,6 +2,9 @@ package local;
 
 import data.FileMetadata;
 import data.SharedFile;
+import local.decl.Observable;
+import local.decl.Observer;
+import local.impl.FileChecksumObserver;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +15,7 @@ import java.util.logging.Logger;
 public class SharedFileService implements Observable<SharedFile> {
     private static final Logger log = Logger.getLogger(SharedFileService.class.getName());
 
-    private List<Observer> observers = new ArrayList<>();
+    private List<Observer<SharedFile>> observers = new ArrayList<>(); // on "ConcurrentModificationException" use CopyOnWriteArrayList, see SharedFile
     private Map<String, SharedFile> sharedFiles = new HashMap<>();
 
     public void addToSharedFiles(FileMetadata metadata) {
@@ -24,12 +27,20 @@ public class SharedFileService implements Observable<SharedFile> {
         SharedFile sharedFile = new SharedFile(metadata);
         sharedFiles.put(metadata.getFileId(), sharedFile);
 
-        // update observers
+        // register observers for shared file
+        // todo: sharedFile.addObserver(/*progress bar gui updater*/);
+        sharedFile.addObserver(new FileChecksumObserver());
+
+        // update "shared files service" observers
         notifyObservers(sharedFile);
     }
 
     public String getFilePath(String fileId) {
         return sharedFiles.get(fileId).getFilePath();
+    }
+
+    synchronized public SharedFile getFile(String fileId) {
+        return sharedFiles.get(fileId);
     }
 
     @Override

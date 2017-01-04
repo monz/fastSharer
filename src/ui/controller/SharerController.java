@@ -1,9 +1,9 @@
 package ui.controller;
 
 import data.SharedFile;
-import local.Observer;
 import local.ServiceLocator;
 import local.SharedFileService;
+import local.decl.Observer;
 import persistence.ConfigFileHandler;
 
 import javax.swing.*;

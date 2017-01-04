@@ -1,4 +1,4 @@
-package local;
+package local.decl;
 
 public interface Observable<T> {
     public void addObserver(Observer observer);
