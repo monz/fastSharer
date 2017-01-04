@@ -4,14 +4,16 @@ import data.FileMetadata;
 import data.SharedFile;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class SharedFileService implements Observable<SharedFile> {
     private static final Logger log = Logger.getLogger(SharedFileService.class.getName());
 
     private List<Observer> observers = new ArrayList<>();
-    private List<SharedFile> sharedFiles = new ArrayList<>();
+    private Map<String, SharedFile> sharedFiles = new HashMap<>();
 
     public void addToSharedFiles(FileMetadata metadata) {
         if (metadata == null) {
@@ -20,10 +22,14 @@ public class SharedFileService implements Observable<SharedFile> {
         log.info(String.format("Added: '%s' to shared files", metadata.getFileName()));
 
         SharedFile sharedFile = new SharedFile(metadata);
-        sharedFiles.add(sharedFile);
+        sharedFiles.put(metadata.getFileId(), sharedFile);
 
         // update observers
         notifyObservers(sharedFile);
+    }
+
+    public String getFilePath(String fileId) {
+        return sharedFiles.get(fileId).getFilePath();
     }
 
     @Override

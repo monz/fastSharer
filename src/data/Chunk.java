@@ -8,18 +8,24 @@ public class Chunk {
     public static final String UNKNOWN_CHECKSUM = null;
     public static final int CHUNK_SIZE = 1024 * 1024 * 64; // 64 MByte
 
+    private String fileId;
     private String checksum;
     private long offset;
     private long size;
     private boolean isLocal;
     private boolean downloadActive;
 
-    public Chunk(long offset, long size) {
+    public Chunk(String fileId, long offset, long size) {
+        this.fileId = fileId;
         this.checksum = UNKNOWN_CHECKSUM;
         this.offset = offset;
         this.size = size;
         this.isLocal = true;
         this.downloadActive = false;
+    }
+
+    public String getFileId() {
+        return fileId;
     }
 
     synchronized public void setLocal(boolean isLocal) {
@@ -88,7 +94,7 @@ public class Chunk {
         return (int) Math.ceil(fileSize / (double) CHUNK_SIZE);
     }
 
-    public static List<Chunk> getChunks(long fileSize) throws IOException {
+    public static List<Chunk> getChunks(String fileId, long fileSize) throws IOException {
         List<Chunk> chunks = new ArrayList<>(getChunkCount(fileSize));
 
         long remainingSize = fileSize;
@@ -97,7 +103,7 @@ public class Chunk {
             long offset = fileSize - remainingSize;
 
             // add chunk
-            chunks.add(new Chunk(offset, size));
+            chunks.add(new Chunk(fileId, offset, size));
 
             remainingSize -= size;
             size = (remainingSize - CHUNK_SIZE) < 0 ? (int) remainingSize : CHUNK_SIZE;

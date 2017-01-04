@@ -14,7 +14,6 @@ public class FileMetadata {
     private String checksum;
     private String fileName;
     private String filePath;
-
     private List<Chunk> chunks;
 
     public FileMetadata(String filePath) throws IOException {
@@ -26,7 +25,11 @@ public class FileMetadata {
         this.filePath = filePath;
         this.fileName = Paths.get(filePath).getFileName().toString();
         this.fileSize = Files.size(Paths.get(filePath));
-        this.chunks = Chunk.getChunks(fileSize);
+        this.chunks = Chunk.getChunks(fileId, fileSize);
+    }
+
+    public List<Chunk> getChunks() {
+        return chunks;
     }
 
     public String getChecksum() {
