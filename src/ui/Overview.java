@@ -100,8 +100,10 @@ public class Overview extends JFrame {
         JPanel filesPanel = new JPanel(new BorderLayout());
         filesPanel.add(files, BorderLayout.CENTER);
 
+        JScrollPane scrollPane = new JScrollPane(files);
+
         p.add(description, BorderLayout.NORTH);
-        p.add(filesPanel, BorderLayout.CENTER);
+        p.add(scrollPane, BorderLayout.CENTER);
 
         return p;
     }

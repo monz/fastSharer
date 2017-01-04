@@ -6,6 +6,7 @@ import java.util.Properties;
 
 public class ServiceLocator {
     public static final String FILE_SERVICE = "fileService";
+    public static final String SHARED_FILE_SERVICE = "sharedFileService";
 
     private static Map<String, Object> services;
     private static ServiceLocator instance;
@@ -28,7 +29,8 @@ public class ServiceLocator {
     private static void init() {
         services = new HashMap<>();
 
-        services.put(FILE_SERVICE, new FileService());
+        services.put(SHARED_FILE_SERVICE, new SharedFileService());
+        services.put(FILE_SERVICE, new FileService()); // depends on shared file service
     }
 
     public static void init(Properties config) {

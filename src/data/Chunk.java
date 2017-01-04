@@ -1,6 +1,11 @@
 package data;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 public class Chunk {
+    public static final String UNKNOWN_CHECKSUM = null;
     public static final int CHUNK_SIZE = 1024 * 1024 * 64; // 64 MByte
 
     private String checksum;
@@ -9,19 +14,11 @@ public class Chunk {
     private boolean isLocal;
     private boolean downloadActive;
 
-    public Chunk(String checksum, long offset, long size, boolean isLocal) {
-        this.checksum = checksum;
+    public Chunk(long offset, long size) {
+        this.checksum = UNKNOWN_CHECKSUM;
         this.offset = offset;
         this.size = size;
-        this.isLocal = isLocal;
-        this.downloadActive = false;
-    }
-
-    public Chunk(String checksum, long offset, long size) {
-        this.checksum = checksum;
-        this.offset = offset;
-        this.size = size;
-        this.isLocal = false;
+        this.isLocal = true;
         this.downloadActive = false;
     }
 
@@ -89,5 +86,23 @@ public class Chunk {
 
     public static int getChunkCount(long fileSize) {
         return (int) Math.ceil(fileSize / (double) CHUNK_SIZE);
+    }
+
+    public static List<Chunk> getChunks(long fileSize) throws IOException {
+        List<Chunk> chunks = new ArrayList<>(getChunkCount(fileSize));
+
+        long remainingSize = fileSize;
+        int size = (int) Math.min(CHUNK_SIZE, remainingSize);
+        while (size > 0) {
+            long offset = fileSize - remainingSize;
+
+            // add chunk
+            chunks.add(new Chunk(offset, size));
+
+            remainingSize -= size;
+            size = (remainingSize - CHUNK_SIZE) < 0 ? (int) remainingSize : CHUNK_SIZE;
+        }
+
+        return chunks;
     }
 }

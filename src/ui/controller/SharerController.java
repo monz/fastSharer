@@ -1,5 +1,9 @@
 package ui.controller;
 
+import data.SharedFile;
+import local.Observer;
+import local.ServiceLocator;
+import local.SharedFileService;
 import persistence.ConfigFileHandler;
 
 import javax.swing.*;
@@ -11,15 +15,18 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class SharerController {
+public class SharerController implements Observer<SharedFile> {
     private static final Logger log = Logger.getLogger(SharerController.class.getName());
     private static final DefaultListModel<String> FILE_LIST_MODEL = new DefaultListModel<>();
     private static final DefaultListModel<String> NODE_LIST_MODEL = new DefaultListModel<>();
     private static final Document SHARER_ID_MODEL = new JTextField().getDocument();
 
+    private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
+
     private static SharerController instance;
 
     private SharerController() {
+        SHARED_FILE_SERVICE.addObserver(this);
     }
 
     public static SharerController getInstance() {
@@ -130,5 +137,16 @@ public class SharerController {
 
     public Properties loadSettings() throws IOException {
         return ConfigFileHandler.loadConfigFile();
+    }
+
+    @Override
+    public void update(SharedFile data) {
+        // due to swing weirdness (not thread safe) have to run on EDT (Event Dispatch Thread)
+        SwingUtilities.invokeLater(() -> {
+                if (FILE_LIST_MODEL.contains(data.getFilePath())) {
+                    return;
+                }
+                FILE_LIST_MODEL.addElement(data.getFilePath());
+        });
     }
 }
