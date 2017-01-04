@@ -12,6 +12,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Calculates the final checksum of a shared file after all chunks' checksums have been calculated
+ * therefore observes the state of the shared file's chunks.
+ */
 public class FileChecksumObserver implements Observer<FileMetadata> {
     private static final Logger log = Logger.getLogger(FileChecksumObserver.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
