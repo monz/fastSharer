@@ -168,8 +168,6 @@ public class NetworkService implements Observable<Node> {
         badTasks.forEach(task -> task.getChunk().deactivateDownload());
         downloadQueue.removeAll(badTasks);
 
-        // actually remove node from list in gui
-        node.getIps().forEach(SHARE_CONTROLLER::removeNode); // TODO: store node in gui as map<nodeId, IP>
         */
 
         nodes.remove(node.getId());

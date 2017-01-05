@@ -20,11 +20,13 @@ public class DiscoveryService implements Service {
 
     private static final Logger log = Logger.getLogger(DiscoveryService.class.getName());
     private static final NetworkService NETWORK_SERVICE = (NetworkService) ServiceLocator.getInstance().getService(ServiceLocator.NETWORK_SERVICE);
+    private static final long CLEAN_TIMEOUT = TimeUnit.MILLISECONDS.convert(60, TimeUnit.SECONDS);
 
     private UUID id;
     private DatagramSocket s;
     private Thread receiver;
     private ScheduledExecutorService sender;
+    private ScheduledExecutorService nodeCleaner;
 
     private long initialDelay;
     private long period;
@@ -37,6 +39,7 @@ public class DiscoveryService implements Service {
         this.period = period;
         this.receiver = new Thread(receiveHello);
         this.sender = Executors.newSingleThreadScheduledExecutor();
+        this.nodeCleaner = Executors.newSingleThreadScheduledExecutor();
     }
 
     @Override
@@ -44,6 +47,7 @@ public class DiscoveryService implements Service {
         try {
             receiver.start();
             sender.scheduleAtFixedRate(sendHello, initialDelay, period, TimeUnit.MILLISECONDS);
+            nodeCleaner.scheduleAtFixedRate(cleanUpNodes, initialDelay, period, TimeUnit.MILLISECONDS);
         } catch (IllegalThreadStateException e) {
             // gets thrown when trying to start service twice
             log.log(Level.WARNING, "Could not start discovery service", e);
@@ -124,6 +128,23 @@ public class DiscoveryService implements Service {
 
                 log.info("Sent id: " + id);
             } catch (Exception e) {
+                log.log(Level.SEVERE, "Ooops!", e);
+            }
+        }
+    };
+
+    private Runnable cleanUpNodes = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                NETWORK_SERVICE.getAllNodes().values().stream()
+                    .filter(n -> {
+                        boolean expired = (n.getLastTimeSeen() + CLEAN_TIMEOUT) < System.currentTimeMillis();
+                        log.info("Expired: " + expired + " Node: " + n.getId() + " last seen: " + n.getLastTimeSeen() + " timeout in: " + (n.getLastTimeSeen() + CLEAN_TIMEOUT - System.currentTimeMillis()));
+                        return expired;
+                    })
+                    .forEach(NETWORK_SERVICE::removeNode);
+            }catch (Exception e) {
                 log.log(Level.SEVERE, "Ooops!", e);
             }
         }
