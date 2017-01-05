@@ -5,6 +5,7 @@ import data.SharedFile;
 import local.decl.Observable;
 import local.decl.Observer;
 import local.impl.FileChecksumObserver;
+import local.impl.ObserverCmd;
 import ui.controller.ChunkProgressController;
 
 import java.util.ArrayList;
@@ -59,6 +60,11 @@ public class SharedFileService implements Observable<SharedFile> {
 
     @Override
     public void notifyObservers(SharedFile data) {
-        observers.forEach(o -> o.update(data));
+        notifyObservers(data, ObserverCmd.ADD);
+    }
+
+    @Override
+    public void notifyObservers(SharedFile data, ObserverCmd cmd) {
+        observers.forEach(o -> o.update(data, cmd));
     }
 }

@@ -1,6 +1,9 @@
 package main;
 
 import local.ServiceLocator;
+import local.SharedFileService;
+import net.DiscoveryService;
+import net.NetworkService;
 import persistence.ConfigFileHandler;
 import ui.Overview;
 import ui.controller.OverviewController;
@@ -10,7 +13,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Properties;
-import java.util.UUID;
 import java.util.logging.Logger;
 
 public class Sharer {
@@ -22,6 +24,10 @@ public class Sharer {
     public static final String NODE_CLEANUP_RATE = "sharer_node_cleanup_period";
     public static final String CMD_PORT = "sharer_cmd_port";
 
+    public static final String MAX_INCOMING_CONNECTIONS = "sharer_max_incoming_connections";
+    public static final String MAX_OUTGOING_CONNECTIONS = "sharer_max_outgoing_connections";
+    public static final String DOWNLOAD_DIRECTORY = "sharer_download_directory";
+
     private static final Logger log = Logger.getLogger(Sharer.class.getName());
 
     public static void main(String[] args) {
@@ -31,8 +37,8 @@ public class Sharer {
             config = loadProperties(configFile.toFile()); // TODO: read from application arguments?
             log.info("Start args: " + Arrays.toString(args) + " length: " + args.length);
             if (args.length > 0) {
-                config.remove("download_destination");
-                config.setProperty("download_destination", args[0]);
+                config.remove(DOWNLOAD_DIRECTORY);
+                config.setProperty(DOWNLOAD_DIRECTORY, args[0]);
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -43,8 +49,16 @@ public class Sharer {
         ServiceLocator.init(config);
         ServiceLocator serviceLocator = ServiceLocator.getInstance();
 
+        DiscoveryService discoveryService = ((DiscoveryService) serviceLocator.getService(ServiceLocator.DISCOVERY_SERVICE));
+        discoveryService.start();
+
         // set Sharer id on gui
-        OverviewController.getInstance().updateSharerId(UUID.randomUUID().toString()); // todo: use local node id of network service
+        NetworkService networkService = ((NetworkService)serviceLocator.getService(ServiceLocator.NETWORK_SERVICE));
+        OverviewController.getInstance().updateSharerId(networkService.getLocalNodeId().toString());
+
+        // register observer for gui
+        ((SharedFileService)serviceLocator.getService(ServiceLocator.SHARED_FILE_SERVICE)).addObserver(OverviewController.getInstance());
+        networkService.addObserver(OverviewController.getInstance());
 
         // show gui
         // todo: start GUI via controller
@@ -75,8 +89,8 @@ public class Sharer {
         is.close();
 
         if (loadedDefault) {
-            String downloadDestination = String.format(config.getProperty("download_destination"), configDir.getParent() + File.separator);
-            config.setProperty("download_destination", downloadDestination);
+            String downloadDestination = String.format(config.getProperty(DOWNLOAD_DIRECTORY), configDir.getParent() + File.separator);
+            config.setProperty(DOWNLOAD_DIRECTORY, downloadDestination);
             // create new config file
             ConfigFileHandler.saveConfigFile(config);
             log.info("Saved new configuration file in: " + configDir);

@@ -1,9 +1,9 @@
 package ui.controller;
 
 import data.SharedFile;
-import local.ServiceLocator;
-import local.SharedFileService;
 import local.decl.Observer;
+import local.impl.ObserverCmd;
+import net.data.Node;
 import persistence.ConfigFileHandler;
 
 import javax.swing.*;
@@ -15,7 +15,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class OverviewController implements Observer<SharedFile> {
+public class OverviewController implements Observer<Object> {
     // todo: hold views for overview
 
     private static final Logger log = Logger.getLogger(OverviewController.class.getName());
@@ -23,12 +23,10 @@ public class OverviewController implements Observer<SharedFile> {
     private static final DefaultListModel<String> NODE_LIST_MODEL = new DefaultListModel<>();
     private static final Document SHARER_ID_MODEL = new JTextField().getDocument();
 
-    private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
-
     private static OverviewController instance;
 
     private OverviewController() {
-        SHARED_FILE_SERVICE.addObserver(this);
+
     }
 
     public static OverviewController getInstance() {
@@ -51,19 +49,6 @@ public class OverviewController implements Observer<SharedFile> {
         return NODE_LIST_MODEL;
     }
 
-    synchronized public void addNode(String ip) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-
-                if (NODE_LIST_MODEL.contains(ip)) {
-                    return;
-                }
-                NODE_LIST_MODEL.addElement(ip);
-            }
-        });
-    }
-
     synchronized public void addFile(String filepath) {
         // due to swing weirdness (not thread safe) have to run on EDT (Event Dispatch Thread)
         SwingUtilities.invokeLater(new Runnable() {
@@ -73,15 +58,6 @@ public class OverviewController implements Observer<SharedFile> {
                     return;
                 }
                 FILE_LIST_MODEL.addElement(filepath);
-            }
-        });
-    }
-
-    synchronized public void removeNode(String ip) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                NODE_LIST_MODEL.removeElement(ip);
             }
         });
     }
@@ -142,13 +118,49 @@ public class OverviewController implements Observer<SharedFile> {
     }
 
     @Override
-    public void update(SharedFile data) {
-        // due to swing weirdness (not thread safe) have to run on EDT (Event Dispatch Thread)
-        SwingUtilities.invokeLater(() -> {
-                if (FILE_LIST_MODEL.contains(data.getFilePath())) {
+    public void update(Object data, ObserverCmd cmd) {
+        if (data instanceof SharedFile) {
+            SharedFile sharedFile = (SharedFile) data;
+            // due to swing weirdness (not thread safe) have to run on EDT (Event Dispatch Thread)
+            SwingUtilities.invokeLater(() -> {
+                if (FILE_LIST_MODEL.contains(sharedFile.getFilePath())) {
                     return;
                 }
-                FILE_LIST_MODEL.addElement(data.getFilePath());
+                FILE_LIST_MODEL.addElement(sharedFile.getFilePath());
+            });
+        } else if (data instanceof Node) {
+            Node node = (Node) data;
+
+            switch (cmd) {
+                case ADD:
+                    addNode(node);
+                    break;
+                case DELETE:
+                    removeNode(node);
+                    break;
+                default:
+                    log.warning(String.format("Unknown ObserverCmd '%s'", cmd));
+                    break;
+            }
+        }
+    }
+
+    private void addNode(Node node) {
+        SwingUtilities.invokeLater(() -> {
+            for (String ip : node.getIps()) {
+                if (NODE_LIST_MODEL.contains(ip)) {
+                    return;
+                }
+                NODE_LIST_MODEL.addElement(ip);
+            }
+        });
+    }
+
+    private void removeNode(Node node) {
+        SwingUtilities.invokeLater(() -> {
+            for (String ip : node.getIps()) {
+                NODE_LIST_MODEL.removeElement(ip);
+            }
         });
     }
 }

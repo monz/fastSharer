@@ -2,6 +2,7 @@ package data;
 
 import local.decl.Observable;
 import local.decl.Observer;
+import local.impl.ObserverCmd;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -33,7 +34,12 @@ public class SharedFile implements Observable<FileMetadata> {
 
     @Override
     public void notifyObservers(FileMetadata data) {
-        observers.forEach(o -> o.update(data));
+        notifyObservers(data, ObserverCmd.ADD);
+    }
+
+    @Override
+    public void notifyObservers(FileMetadata data, ObserverCmd cmd) {
+        observers.forEach(o -> o.update(data, cmd));
     }
 
     public FileMetadata getMetadata() {

@@ -5,6 +5,7 @@ import data.SharedFile;
 import local.ServiceLocator;
 import local.SharedFileService;
 import local.decl.Observer;
+import local.impl.ObserverCmd;
 import ui.ProgressDialog;
 
 import java.util.logging.Logger;
@@ -25,7 +26,7 @@ public class ChunkProgressController implements Observer<FileMetadata> {
     }
 
     @Override
-    synchronized public void update(FileMetadata data) {
+    synchronized public void update(FileMetadata data, ObserverCmd cmd) {
         // open dialog for shared file(one for each fileId), if not exist
         if (progressDialog == null) {
             progressDialog = new ProgressDialog(data.getFileName(), data.getChunks().size());
