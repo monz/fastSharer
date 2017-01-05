@@ -28,7 +28,6 @@ public class FileService {
                 continue;
             }
 
-            // todo: each in new thread
             FileMetadata metadata;
             try {
                  metadata = new FileMetadata(file.getAbsolutePath());
@@ -46,8 +45,7 @@ public class FileService {
     }
 
     private boolean isFileInList(File file) {
-        // todo: implement
-        return false;
+        return SHARED_FILE_SERVICE.isFileShared(file);
     }
 
 }

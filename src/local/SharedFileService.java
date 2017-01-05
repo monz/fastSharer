@@ -8,6 +8,7 @@ import local.impl.FileChecksumObserver;
 import local.impl.ObserverCmd;
 import ui.controller.ChunkProgressController;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -66,5 +67,14 @@ public class SharedFileService implements Observable<SharedFile> {
     @Override
     public void notifyObservers(SharedFile data, ObserverCmd cmd) {
         observers.forEach(o -> o.update(data, cmd));
+    }
+
+    boolean isFileShared(String fileId) {
+        return sharedFiles.get(fileId) != null;
+    }
+
+    boolean isFileShared(File file) {
+        // check whether a file with given path exists already
+        return sharedFiles.values().stream().anyMatch(sf -> sf.getFilePath().equals(file.getAbsolutePath()));
     }
 }

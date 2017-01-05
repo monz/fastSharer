@@ -116,7 +116,7 @@ public class NetworkService implements Observable<Node> {
         });
     }
 
-    synchronized public boolean addNode(Node newNode) {
+    synchronized boolean addNode(Node newNode) {
         UUID newNodeId = newNode.getId();
 
         boolean isNewNode;
@@ -150,7 +150,7 @@ public class NetworkService implements Observable<Node> {
         return isNewNode;
     }
 
-    synchronized public void removeNode(Node node) { //TODO: rewrite to use parameter UUID nodeId
+    synchronized void removeNode(Node node) {
         log.info("Removed node '" + node.getId() + "'");
 
         // clear node from shared files
