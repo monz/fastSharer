@@ -25,13 +25,13 @@ public class FileChecksumObserver implements Observer<FileMetadata> {
         SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(data.getFileId());
 
         // check whether checksum is already calculated
-        if (data.getChecksum() != null && ! data.getChecksum().equals("")) {
+        if (data.hasChecksum()) {
             sharedFile.removeObserver(this);
             return;
         }
 
         // check if all chunks checksums are calculated
-        boolean allChecksums = data.getChunks().stream().allMatch(c -> c.getChecksum() != null && ! c.getChecksum().equals(""));
+        boolean allChecksums = data.getChunks().stream().allMatch(c -> c.hasChecksum());
         if (!allChecksums) {
             return;
         }

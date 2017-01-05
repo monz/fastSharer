@@ -1,6 +1,6 @@
 package ui;
 
-import ui.controller.SharerController;
+import ui.controller.OverviewController;
 import ui.logic.DroppedFileListener;
 
 import javax.swing.*;
@@ -13,7 +13,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Overview extends JFrame {
-    private static final SharerController SHARER_CONTROLLER = SharerController.getInstance();
+    private static final OverviewController SHARER_CONTROLLER = OverviewController.getInstance();
     private JMenuBar menuBar;
 
     private static final long serialVersionUID = 1L;

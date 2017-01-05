@@ -5,6 +5,7 @@ import data.SharedFile;
 import local.decl.Observable;
 import local.decl.Observer;
 import local.impl.FileChecksumObserver;
+import ui.controller.ChunkProgressController;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,8 +29,8 @@ public class SharedFileService implements Observable<SharedFile> {
         sharedFiles.put(metadata.getFileId(), sharedFile);
 
         // register observers for shared file
-        // todo: sharedFile.addObserver(/*progress bar gui updater*/);
         sharedFile.addObserver(new FileChecksumObserver());
+        sharedFile.addObserver(new ChunkProgressController(metadata.getFileId()));
 
         // update "shared files service" observers
         notifyObservers(sharedFile);

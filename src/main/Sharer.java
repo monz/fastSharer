@@ -3,7 +3,7 @@ package main;
 import local.ServiceLocator;
 import persistence.ConfigFileHandler;
 import ui.Overview;
-import ui.controller.SharerController;
+import ui.controller.OverviewController;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -44,9 +44,10 @@ public class Sharer {
         ServiceLocator serviceLocator = ServiceLocator.getInstance();
 
         // set Sharer id on gui
-        SharerController.getInstance().updateSharerId(UUID.randomUUID().toString()); // todo: use local node id of network service
+        OverviewController.getInstance().updateSharerId(UUID.randomUUID().toString()); // todo: use local node id of network service
 
         // show gui
+        // todo: start GUI via controller
         Overview o = new Overview("Sharer");
         o.setVisible(true);
     }

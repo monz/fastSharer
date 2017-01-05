@@ -32,10 +32,6 @@ public class ChunkSumService {
         start();
     }
 
-    public void add(Chunk chunk) {
-        queue.offer(chunk);
-    }
-
     public void addAll(Collection<Chunk> chunks) {
         chunks.forEach(queue::offer);
     }

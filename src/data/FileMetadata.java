@@ -63,4 +63,8 @@ public class FileMetadata {
     public int getExpectedChunkCount() {
         return Chunk.getChunkCount(fileSize);
     }
+
+    public boolean hasChecksum() {
+        return checksum != null && ! checksum.equals("");
+    }
 }

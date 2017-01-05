@@ -1,6 +1,6 @@
 package ui;
 
-import ui.controller.SharerController;
+import ui.controller.OverviewController;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 
 public class Settings extends JPanel {
     private static final Logger log = Logger.getLogger(Settings.class.getName());
-    private static final SharerController SHARE_CONTROLLER = SharerController.getInstance();
+    private static final OverviewController SHARE_CONTROLLER = OverviewController.getInstance();
     private JDialog dialog;
     private JTextField downloadDir;
 

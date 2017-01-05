@@ -111,4 +111,8 @@ public class Chunk {
 
         return chunks;
     }
+
+    public boolean hasChecksum() {
+        return checksum != null && ! checksum.equals("");
+    }
 }

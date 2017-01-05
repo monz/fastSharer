@@ -15,29 +15,31 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class SharerController implements Observer<SharedFile> {
-    private static final Logger log = Logger.getLogger(SharerController.class.getName());
+public class OverviewController implements Observer<SharedFile> {
+    // todo: hold views for overview
+
+    private static final Logger log = Logger.getLogger(OverviewController.class.getName());
     private static final DefaultListModel<String> FILE_LIST_MODEL = new DefaultListModel<>();
     private static final DefaultListModel<String> NODE_LIST_MODEL = new DefaultListModel<>();
     private static final Document SHARER_ID_MODEL = new JTextField().getDocument();
 
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
-    private static SharerController instance;
+    private static OverviewController instance;
 
-    private SharerController() {
+    private OverviewController() {
         SHARED_FILE_SERVICE.addObserver(this);
     }
 
-    public static SharerController getInstance() {
+    public static OverviewController getInstance() {
         if ( instance == null ) {
-            instance = new SharerController();
+            instance = new OverviewController();
         }
         return instance;
     }
 
-    public static SharerController TEST_newShareControllerInstance() {
-        instance = new SharerController();
+    public static OverviewController TEST_newShareControllerInstance() {
+        instance = new OverviewController();
         return instance;
     }
 
