@@ -28,15 +28,13 @@ public class ChunkSumService {
 
     public ChunkSumService() {
         threadPool = Executors.newSingleThreadExecutor();
-
-        start();
     }
 
     public void addAll(Collection<Chunk> chunks) {
         chunks.forEach(queue::offer);
     }
 
-    private void start() {
+    public void start() {
         log.info("Start ChunkSumService");
 
         service = new Thread(() -> {

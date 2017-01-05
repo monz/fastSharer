@@ -1,5 +1,7 @@
 package data;
 
+import com.google.gson.annotations.Expose;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -9,12 +11,13 @@ import java.util.UUID;
 public class FileMetadata {
     public static final String UNKNOWN_FILE_ID = null;
 
-    private String fileId;
-    private long fileSize;
-    private String checksum;
-    private String fileName;
+    @Expose private String fileId;
+    @Expose private long fileSize;
+    @Expose private String checksum;
+    @Expose private String fileName;
+    @Expose private List<Chunk> chunks;
+
     private String filePath;
-    private List<Chunk> chunks;
 
     public FileMetadata(String filePath) throws IOException {
         this(UUID.randomUUID().toString(), filePath);

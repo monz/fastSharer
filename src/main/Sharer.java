@@ -1,9 +1,12 @@
 package main;
 
+import local.ChunkSumService;
 import local.ServiceLocator;
 import local.SharedFileService;
 import net.DiscoveryService;
 import net.NetworkService;
+import net.ShareCommandReceiverService;
+import net.SharedFileInfoService;
 import persistence.ConfigFileHandler;
 import ui.Overview;
 import ui.controller.OverviewController;
@@ -21,7 +24,8 @@ public class Sharer {
 
     public static final String DISCOVERY_PORT = "sharer_discovery_port";
     public static final String DISCOVERY_PERIOD = "sharer_discovery_period";
-    public static final String NODE_CLEANUP_RATE = "sharer_node_cleanup_period";
+    public static final String SHARE_INFO_PERIOD = "sharer_share_info_period";
+    public static final String NODE_CLEANUP_RATE = "sharer_discovery_node_cleanup_period";
     public static final String CMD_PORT = "sharer_cmd_port";
 
     public static final String MAX_INCOMING_CONNECTIONS = "sharer_max_incoming_connections";
@@ -49,15 +53,32 @@ public class Sharer {
         ServiceLocator.init(config);
         ServiceLocator serviceLocator = ServiceLocator.getInstance();
 
+        // start chunk sum service
+        ChunkSumService chunkSumService = ((ChunkSumService) serviceLocator.getService(ServiceLocator.CHUNK_SUM_SERVICE));
+        chunkSumService.start();
+
+        // start discovery service
         DiscoveryService discoveryService = ((DiscoveryService) serviceLocator.getService(ServiceLocator.DISCOVERY_SERVICE));
         discoveryService.start();
+
+        // start share command receiver service
+        ShareCommandReceiverService shareCommandReceiverService = ((ShareCommandReceiverService) serviceLocator.getService(ServiceLocator.SHARED_CMD_RECEIVER_SERVICE));
+        shareCommandReceiverService.start();
+
+        // start share info file service
+        SharedFileInfoService sharedFileInfoService = ((SharedFileInfoService) serviceLocator.getService(ServiceLocator.SHARED_FILE_INFO_SERVICE));
+        sharedFileInfoService.start();
+
+        // register observer for shared files
+        SharedFileService sharedFileService = ((SharedFileService) serviceLocator.getService(ServiceLocator.SHARED_FILE_SERVICE));
+        // todo: register observer
 
         // set Sharer id on gui
         NetworkService networkService = ((NetworkService)serviceLocator.getService(ServiceLocator.NETWORK_SERVICE));
         OverviewController.getInstance().updateSharerId(networkService.getLocalNodeId().toString());
 
         // register observer for gui
-        ((SharedFileService)serviceLocator.getService(ServiceLocator.SHARED_FILE_SERVICE)).addObserver(OverviewController.getInstance());
+        sharedFileService.addObserver(OverviewController.getInstance());
         networkService.addObserver(OverviewController.getInstance());
 
         // show gui

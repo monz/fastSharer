@@ -46,6 +46,10 @@ public class SharedFileService implements Observable<SharedFile> {
         return sharedFiles.get(fileId);
     }
 
+    synchronized public Map<String, SharedFile> getAll() {
+        return sharedFiles;
+    }
+
     @Override
     public void addObserver(Observer observer) {
         if (observers.contains(observer)) {

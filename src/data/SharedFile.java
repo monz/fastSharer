@@ -1,5 +1,6 @@
 package data;
 
+import com.google.gson.annotations.Expose;
 import local.decl.Observable;
 import local.decl.Observer;
 import local.impl.ObserverCmd;
@@ -8,7 +9,7 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class SharedFile implements Observable<FileMetadata> {
-    private FileMetadata metadata;
+    @Expose private FileMetadata metadata;
     private List<Observer<FileMetadata>> observers = new CopyOnWriteArrayList<>(); // prevents "ConcurrentModificationException" http://stackoverflow.com/questions/19197579/java-observer-pattern-how-to-remove-observers-during-updatenotify-loop-itera
 
     public SharedFile(FileMetadata metadata) {

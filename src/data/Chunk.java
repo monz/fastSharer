@@ -1,5 +1,7 @@
 package data;
 
+import com.google.gson.annotations.Expose;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,10 +10,11 @@ public class Chunk {
     public static final String UNKNOWN_CHECKSUM = null;
     public static final int CHUNK_SIZE = 1024 * 1024 * 64; // 64 MByte
 
+    @Expose private String checksum;
+    @Expose private long offset;
+    @Expose private long size;
+
     private String fileId;
-    private String checksum;
-    private long offset;
-    private long size;
     private boolean isLocal;
     private boolean downloadActive;
 
