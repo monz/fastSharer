@@ -70,4 +70,8 @@ public class FileMetadata {
     public boolean hasChecksum() {
         return checksum != null && ! checksum.equals("");
     }
+
+    public void setFilePath(String filePath) {
+        this.filePath = filePath;
+    }
 }

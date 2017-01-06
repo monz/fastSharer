@@ -37,7 +37,7 @@ public class FileService {
             }
 
             // add to shared file list
-            SHARED_FILE_SERVICE.addToSharedFiles(metadata);
+            SHARED_FILE_SERVICE.addLocalFile(metadata);
 
             // start chunk checksum calculation
             CHUNK_SUM_SERVICE.addAll(metadata.getChunks());

@@ -2,30 +2,41 @@ package local;
 
 import data.FileMetadata;
 import data.SharedFile;
-import local.decl.Observable;
-import local.decl.Observer;
+import local.decl.AddFileListener;
 import local.impl.FileChecksumObserver;
-import local.impl.ObserverCmd;
 import ui.controller.ChunkProgressController;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-public class SharedFileService implements Observable<SharedFile> {
+public class SharedFileService {
     private static final Logger log = Logger.getLogger(SharedFileService.class.getName());
 
-    private List<Observer<SharedFile>> observers = new ArrayList<>(); // on "ConcurrentModificationException" use CopyOnWriteArrayList, see SharedFile
     private Map<String, SharedFile> sharedFiles = new HashMap<>();
+    private List<AddFileListener> fileListeners = new ArrayList<>();
+    private String downloadDirectory;
 
-    public void addToSharedFiles(FileMetadata metadata) {
+    public SharedFileService(String downloadDirectory) {
+        this.downloadDirectory = downloadDirectory;
+    }
+
+    public void addFileListener(AddFileListener listener) {
+        if (listener == null) {
+            return;
+        }
+        fileListeners.add(listener);
+    }
+
+    public void addLocalFile(FileMetadata metadata) {
         if (metadata == null) {
             return;
         }
-        log.info(String.format("Added: '%s' to shared files", metadata.getFileName()));
+        log.info(String.format("Added local file: '%s' to shared files", metadata.getFileName()));
 
         SharedFile sharedFile = new SharedFile(metadata);
         sharedFiles.put(metadata.getFileId(), sharedFile);
@@ -34,8 +45,29 @@ public class SharedFileService implements Observable<SharedFile> {
         sharedFile.addObserver(new FileChecksumObserver());
         sharedFile.addObserver(new ChunkProgressController(metadata.getFileId()));
 
-        // update "shared files service" observers
-        notifyObservers(sharedFile);
+        // notify listeners
+        fileListeners.forEach(l -> l.addedLocalFile(sharedFile));
+    }
+
+    public void addRemoteFile(SharedFile sharedFile) {
+        // todo: implement
+        if (sharedFile == null || sharedFile.getMetadata() == null) {
+            return;
+        }
+
+        log.info(String.format("Added remote file: '%s' to shared files", sharedFile.getFilename()));
+
+        // set file path
+        sharedFile.setFilePath(Paths.get(downloadDirectory, sharedFile.getFilename()).toString());
+
+        // todo: register download chunks observer, in Sharer.class?
+
+        // todo: add to shared files map, if exists update shared file
+
+        // todo: register file download finisher?
+
+        // notify listeners
+        fileListeners.forEach(l -> l.addedRemoteFile(sharedFile));
     }
 
     public String getFilePath(String fileId) {
@@ -48,29 +80,6 @@ public class SharedFileService implements Observable<SharedFile> {
 
     synchronized public Map<String, SharedFile> getAll() {
         return sharedFiles;
-    }
-
-    @Override
-    public void addObserver(Observer observer) {
-        if (observers.contains(observer)) {
-            return;
-        }
-        observers.add(observer);
-    }
-
-    @Override
-    public void removeObserver(Observer observer) {
-        observers.remove(observer);
-    }
-
-    @Override
-    public void notifyObservers(SharedFile data) {
-        notifyObservers(data, ObserverCmd.ADD);
-    }
-
-    @Override
-    public void notifyObservers(SharedFile data, ObserverCmd cmd) {
-        observers.forEach(o -> o.update(data, cmd));
     }
 
     boolean isFileShared(String fileId) {

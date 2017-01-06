@@ -51,10 +51,11 @@ public class ServiceLocator {
         int discoveryPort = Integer.parseInt(config.getProperty(Sharer.DISCOVERY_PORT));
         long discoveryPeriod = Long.parseLong(config.getProperty(Sharer.DISCOVERY_PERIOD));
         long shareInfoPeriod = Long.parseLong(config.getProperty(Sharer.SHARE_INFO_PERIOD));
+        String downloadDirectory = config.getProperty(Sharer.DOWNLOAD_DIRECTORY);
 
         services = new HashMap<>();
 
-        services.put(SHARED_FILE_SERVICE, new SharedFileService());
+        services.put(SHARED_FILE_SERVICE, new SharedFileService(downloadDirectory));
         services.put(NETWORK_SERVICE, new NetworkService(cmdPort, maxIncomingConnections, maxOutgoingConnections));
         services.put(SHARED_FILE_INFO_SERVICE, new SharedFileInfoService(shareInfoPeriod));
         services.put(CHUNK_SUM_SERVICE, new ChunkSumService()); // depends on shared file service

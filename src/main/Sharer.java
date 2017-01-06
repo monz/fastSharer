@@ -77,9 +77,9 @@ public class Sharer {
         NetworkService networkService = ((NetworkService)serviceLocator.getService(ServiceLocator.NETWORK_SERVICE));
         OverviewController.getInstance().updateSharerId(networkService.getLocalNodeId().toString());
 
-        // register observer for gui
-        sharedFileService.addObserver(OverviewController.getInstance());
-        networkService.addObserver(OverviewController.getInstance());
+        // register listener for gui
+        sharedFileService.addFileListener(OverviewController.getInstance());
+        networkService.addNodeStateListener(OverviewController.getInstance());
 
         // show gui
         // todo: start GUI via controller

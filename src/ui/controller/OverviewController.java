@@ -1,8 +1,8 @@
 package ui.controller;
 
 import data.SharedFile;
-import local.decl.Observer;
-import local.impl.ObserverCmd;
+import local.decl.AddFileListener;
+import local.decl.NodeStateListener;
 import net.data.Node;
 import persistence.ConfigFileHandler;
 
@@ -15,7 +15,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class OverviewController implements Observer<Object> {
+public class OverviewController implements AddFileListener, NodeStateListener {
     // todo: hold views for overview
 
     private static final Logger log = Logger.getLogger(OverviewController.class.getName());
@@ -118,34 +118,29 @@ public class OverviewController implements Observer<Object> {
     }
 
     @Override
-    public void update(Object data, ObserverCmd cmd) {
-        if (data instanceof SharedFile) {
-            SharedFile sharedFile = (SharedFile) data;
-            // due to swing weirdness (not thread safe) have to run on EDT (Event Dispatch Thread)
-            SwingUtilities.invokeLater(() -> {
-                if (FILE_LIST_MODEL.contains(sharedFile.getFilePath())) {
-                    return;
-                }
-                FILE_LIST_MODEL.addElement(sharedFile.getFilePath());
-            });
-        } else if (data instanceof Node) {
-            Node node = (Node) data;
-
-            switch (cmd) {
-                case ADD:
-                    addNode(node);
-                    break;
-                case DELETE:
-                    removeNode(node);
-                    break;
-                default:
-                    log.warning(String.format("Unknown ObserverCmd '%s'", cmd));
-                    break;
+    public void addedLocalFile(SharedFile sharedFile) {
+        // due to swing weirdness (not thread safe) have to run on EDT (Event Dispatch Thread)
+        SwingUtilities.invokeLater(() -> {
+            if (FILE_LIST_MODEL.contains(sharedFile.getFilePath())) {
+                return;
             }
-        }
+            FILE_LIST_MODEL.addElement(sharedFile.getFilePath());
+        });
     }
 
-    private void addNode(Node node) {
+    @Override
+    public void addedRemoteFile(SharedFile sharedFile) {
+        // due to swing weirdness (not thread safe) have to run on EDT (Event Dispatch Thread)
+        SwingUtilities.invokeLater(() -> {
+            if (FILE_LIST_MODEL.contains(sharedFile.getFilePath())) {
+                return;
+            }
+            FILE_LIST_MODEL.addElement(sharedFile.getFilePath());
+        });
+    }
+
+    @Override
+    public void addNode(Node node) {
         SwingUtilities.invokeLater(() -> {
             for (String ip : node.getIps()) {
                 if (NODE_LIST_MODEL.contains(ip)) {
@@ -156,7 +151,8 @@ public class OverviewController implements Observer<Object> {
         });
     }
 
-    private void removeNode(Node node) {
+    @Override
+    public void removeNode(Node node) {
         SwingUtilities.invokeLater(() -> {
             for (String ip : node.getIps()) {
                 NODE_LIST_MODEL.removeElement(ip);

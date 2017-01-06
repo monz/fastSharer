@@ -20,6 +20,10 @@ public class SharedFile implements Observable<FileMetadata> {
         return metadata.getFilePath();
     }
 
+    public void setFilePath(String filePath) {
+        metadata.setFilePath(filePath);
+    }
+
     @Override
     public void addObserver(Observer observer) {
         if (observers.contains(observer)) {
@@ -45,5 +49,9 @@ public class SharedFile implements Observable<FileMetadata> {
 
     public FileMetadata getMetadata() {
         return metadata;
+    }
+
+    public String getFilename() {
+        return metadata.getFileName();
     }
 }

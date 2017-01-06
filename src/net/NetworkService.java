@@ -3,9 +3,7 @@ package net;
 import com.google.gson.TypeAdapter;
 import local.ServiceLocator;
 import local.SharedFileService;
-import local.decl.Observable;
-import local.decl.Observer;
-import local.impl.ObserverCmd;
+import local.decl.NodeStateListener;
 import net.data.Node;
 import net.data.ShareCommand;
 
@@ -23,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class NetworkService implements Observable<Node> {
+public class NetworkService {
     public static final Charset PROTOCOL_CHARSET = Charset.forName("UTF-8");
 
     private static final Logger log = Logger.getLogger(NetworkService.class.getName());
@@ -32,18 +30,25 @@ public class NetworkService implements Observable<Node> {
 
     private ExecutorService threadPool;
     private Map<UUID, Node> nodes;
+    private List<NodeStateListener> nodeStateListeners;
     private int cmdPort;
     private int maxIncomingConnections;
     private int maxOutgoingConnections;
 
-    private ArrayList<Observer<Node>> observers = new ArrayList<>();
-
     public NetworkService(int cmdPort, int maxIncomingConnections, int maxOutgoingConnections) {
         this.threadPool = Executors.newSingleThreadExecutor(); // todo: make thread count configurable
         this.nodes = new HashMap<>();
+        this.nodeStateListeners = new ArrayList<>();
         this.cmdPort = cmdPort;
         this.maxIncomingConnections = maxIncomingConnections;
         this.maxOutgoingConnections = maxOutgoingConnections;
+    }
+
+    public void addNodeStateListener(NodeStateListener listener) {
+        if (listener == null) {
+            return;
+        }
+        nodeStateListeners.add(listener);
     }
 
     synchronized public void broadcast(ShareCommand<?> shareListMsg) {
@@ -132,7 +137,7 @@ public class NetworkService implements Observable<Node> {
             } else {
                 ips.addAll(newNode.getIps());
                 // update gui
-                notifyObservers(node);
+                nodeStateListeners.forEach(l -> l.addNode(node));
             }
             isNewNode =  false;
         } else {
@@ -142,7 +147,7 @@ public class NetworkService implements Observable<Node> {
             nodes.put(newNodeId, newNode);
 
             // update gui
-            notifyObservers(newNode);
+            nodeStateListeners.forEach(l -> l.addNode(newNode));
 
             isNewNode = true;
         }
@@ -173,7 +178,7 @@ public class NetworkService implements Observable<Node> {
         nodes.remove(node.getId());
 
         // update gui
-        notifyObservers(node, ObserverCmd.DELETE);
+        nodeStateListeners.forEach(l -> l.removeNode(node));
     }
 
     synchronized public UUID getLocalNodeId() {
@@ -195,28 +200,5 @@ public class NetworkService implements Observable<Node> {
 
     synchronized public boolean allowNewConnection() {
         return getActiveUploads() <= maxOutgoingConnections;
-    }
-
-    @Override
-    public void addObserver(Observer observer) {
-        if (observers.contains(observer)) {
-            return;
-        }
-        observers.add(observer);
-    }
-
-    @Override
-    public void removeObserver(Observer observer) {
-        observers.remove(observer);
-    }
-
-    @Override
-    public void notifyObservers(Node data) {
-        notifyObservers(data, ObserverCmd.ADD);
-    }
-
-    @Override
-    public void notifyObservers(Node data, ObserverCmd cmd) {
-        observers.forEach(o -> o.update(data, cmd));
     }
 }
