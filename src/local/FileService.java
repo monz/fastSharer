@@ -36,6 +36,7 @@ public class FileService {
                 continue;
             }
 
+            // todo: instead of push objects to xService use events and listeners
             // add to shared file list
             SHARED_FILE_SERVICE.addLocalFile(metadata);
 

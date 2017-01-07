@@ -28,36 +28,38 @@ public class ChunkSumService {
 
     public ChunkSumService() {
         threadPool = Executors.newSingleThreadExecutor();
-    }
-
-    public void addAll(Collection<Chunk> chunks) {
-        chunks.forEach(queue::offer);
+        service = new Thread(handleChunk);
     }
 
     public void start() {
         log.info("Start ChunkSumService");
 
-        service = new Thread(() -> {
-            while(true) {
-                Chunk c;
-                try {
-                    c = queue.take();
-                } catch (InterruptedException e) {
-                    log.log(Level.INFO, "", e);
-                    continue;
-                }
-
-                // calculate checksum
-                threadPool.execute(() -> {
-                    c.setChecksum(calculateChecksum(c));
-
-                    // update metadata observers
-                    SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(c.getFileId());
-                    sharedFile.notifyObservers(sharedFile.getMetadata());
-                });
-            }
-        });
         service.start();
+    }
+
+    private Runnable handleChunk = () -> {
+        while(true) {
+            Chunk c;
+            try {
+                c = queue.take();
+            } catch (InterruptedException e) {
+                log.log(Level.INFO, "", e);
+                continue;
+            }
+
+            // calculate checksum
+            threadPool.execute(() -> {
+                c.setChecksum(calculateChecksum(c));
+
+                // update metadata observers
+                SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(c.getFileId());
+                sharedFile.notifyObservers(sharedFile.getMetadata());
+            });
+        }
+    };
+
+    public void addAll(Collection<Chunk> chunks) {
+        chunks.forEach(queue::offer);
     }
 
     private String calculateChecksum(Chunk c) {
