@@ -77,11 +77,10 @@ public class ServiceLocator {
     }
 
     public static void init(Properties config) {
+        ServiceLocator.config = config;
+
         if (instance == null) {
-            ServiceLocator.config = config;
             init();
-        } else {
-            ServiceLocator.config = config;
         }
     }
 

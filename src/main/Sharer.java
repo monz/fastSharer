@@ -71,7 +71,8 @@ public class Sharer {
 
         // register observer for shared files
         SharedFileService sharedFileService = ((SharedFileService) serviceLocator.getService(ServiceLocator.SHARED_FILE_SERVICE));
-        // todo: register observer
+        // todo: register shared file listener to download chunks
+
 
         // set Sharer id on gui
         NetworkService networkService = ((NetworkService)serviceLocator.getService(ServiceLocator.NETWORK_SERVICE));

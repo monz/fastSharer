@@ -160,7 +160,7 @@ public class NetworkService {
 
         // clear node from shared files
         SharedFileService sharedFileService = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
-        //sharedFileService.removeNodeFromReplicaNodes(node.getId());
+        sharedFileService.removeNodeFromReplicaNodes(node.getId());
 
         // todo: implement new services
         /*
