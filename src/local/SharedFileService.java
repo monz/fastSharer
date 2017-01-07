@@ -24,7 +24,7 @@ public class SharedFileService {
     }
 
     public void addFileListener(AddFileListener listener) {
-        if (listener == null) {
+        if (listener == null || fileListeners.contains(listener)) {
             return;
         }
         fileListeners.add(listener);

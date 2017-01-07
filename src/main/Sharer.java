@@ -3,10 +3,7 @@ package main;
 import local.ChunkSumService;
 import local.ServiceLocator;
 import local.SharedFileService;
-import net.DiscoveryService;
-import net.NetworkService;
-import net.ShareCommandReceiverService;
-import net.SharedFileInfoService;
+import net.*;
 import persistence.ConfigFileHandler;
 import ui.Overview;
 import ui.controller.OverviewController;
@@ -71,8 +68,7 @@ public class Sharer {
 
         // register observer for shared files
         SharedFileService sharedFileService = ((SharedFileService) serviceLocator.getService(ServiceLocator.SHARED_FILE_SERVICE));
-        // todo: register shared file listener to download chunks
-
+        sharedFileService.addFileListener((DownloadService)serviceLocator.getService(ServiceLocator.DOWNLOAD_SERVICE));
 
         // set Sharer id on gui
         NetworkService networkService = ((NetworkService)serviceLocator.getService(ServiceLocator.NETWORK_SERVICE));

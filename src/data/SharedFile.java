@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 public class SharedFile implements Observable<FileMetadata> {
     @Expose private FileMetadata metadata;
@@ -83,6 +84,23 @@ public class SharedFile implements Observable<FileMetadata> {
                 currentChecksums.addAll(chunkChecksums);
             }
         }
+    }
+
+    synchronized public List<Chunk> getChunksToDownload() {
+        if (metadata.getChunks() == null || isLocal) {
+            return null;
+        }
+
+        return metadata.getChunks().stream()
+            .filter(c -> ! c.isLocal())
+            .collect(Collectors.toList());
+    }
+
+    synchronized public List<UUID> getReplicaNodesByChunk(String chunkChecksum) {
+        return replicaNodes.entrySet().stream()
+            .filter(e -> e.getValue().contains(chunkChecksum))
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toList());
     }
 
     @Override

@@ -32,20 +32,16 @@ public class NetworkService {
     private Map<UUID, Node> nodes;
     private List<NodeStateListener> nodeStateListeners;
     private int cmdPort;
-    private int maxIncomingConnections;
-    private int maxOutgoingConnections;
 
-    public NetworkService(int cmdPort, int maxIncomingConnections, int maxOutgoingConnections) {
+    public NetworkService(int cmdPort) {
         this.threadPool = Executors.newSingleThreadExecutor(); // todo: make thread count configurable
         this.nodes = new HashMap<>();
         this.nodeStateListeners = new ArrayList<>();
         this.cmdPort = cmdPort;
-        this.maxIncomingConnections = maxIncomingConnections;
-        this.maxOutgoingConnections = maxOutgoingConnections;
     }
 
     public void addNodeStateListener(NodeStateListener listener) {
-        if (listener == null) {
+        if (listener == null || nodeStateListeners.contains(listener)) {
             return;
         }
         nodeStateListeners.add(listener);
@@ -196,9 +192,5 @@ public class NetworkService {
     synchronized public int getActiveUploads() {
         // TODO: implement
         return -1;
-    }
-
-    synchronized public boolean allowNewConnection() {
-        return getActiveUploads() <= maxOutgoingConnections;
     }
 }
