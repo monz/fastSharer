@@ -117,6 +117,10 @@ public class SharedFile implements Observable<FileMetadata> {
         return metadata.getFileSize();
     }
 
+    synchronized public boolean isDownloadActive() {
+        return metadata.getChunks().stream().anyMatch(Chunk::isDownloadActive);
+    }
+
     @Override
     public void addObserver(Observer observer) {
         if (observers.contains(observer)) {
