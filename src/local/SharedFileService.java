@@ -32,7 +32,7 @@ public class SharedFileService {
         fileListeners.add(listener);
     }
 
-    public void addLocalFile(FileMetadata metadata) {
+    synchronized public void addLocalFile(FileMetadata metadata) {
         if (metadata == null) {
             return;
         }
@@ -51,7 +51,7 @@ public class SharedFileService {
         fileListeners.forEach(l -> l.addedLocalFile(sharedFile));
     }
 
-    public void addRemoteFile(SharedFile sharedFile) {
+    synchronized public void addRemoteFile(SharedFile sharedFile) {
         if (sharedFile == null || sharedFile.getMetadata() == null || sharedFiles.get(sharedFile.getFileId()) != null) {
             return;
         }
@@ -104,12 +104,12 @@ public class SharedFileService {
         return sharedFiles;
     }
 
-    boolean isFileShared(File file) {
+    synchronized boolean isFileShared(File file) {
         // check whether a file with given path exists already
         return sharedFiles.values().stream().anyMatch(sf -> sf.getFilePath().equals(file.getAbsolutePath()));
     }
 
-    public void removeNodeFromReplicaNodes(UUID nodeId) {
+    synchronized public void removeNodeFromReplicaNodes(UUID nodeId) {
         sharedFiles.values().forEach(sf -> {
             sf.getReplicaNodes().remove(nodeId);
         });

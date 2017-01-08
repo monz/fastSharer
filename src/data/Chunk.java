@@ -27,8 +27,12 @@ public class Chunk {
         this.downloadActive = false;
     }
 
-    public String getFileId() {
+    synchronized public String getFileId() {
         return fileId;
+    }
+
+    synchronized public void setFileId(String fileId) {
+        this.fileId = fileId;
     }
 
     synchronized public void setLocal(boolean isLocal) {
@@ -89,7 +93,7 @@ public class Chunk {
         return (int) Math.ceil(fileSize / (double) CHUNK_SIZE);
     }
 
-    public static List<Chunk> getChunks(String fileId, long fileSize) throws IOException {
+    synchronized public static List<Chunk> getChunks(String fileId, long fileSize) throws IOException {
         List<Chunk> chunks = new ArrayList<>(getChunkCount(fileSize));
 
         long remainingSize = fileSize;
@@ -107,11 +111,7 @@ public class Chunk {
         return chunks;
     }
 
-    public boolean hasChecksum() {
+    synchronized public boolean hasChecksum() {
         return checksum != null && ! checksum.equals("");
-    }
-
-    public void setFileId(String fileId) {
-        this.fileId = fileId;
     }
 }

@@ -29,7 +29,7 @@ public class FileMetadata {
         this.chunks = Chunk.getChunks(fileId, fileSize);
     }
 
-    public List<Chunk> getChunks() {
+    synchronized public List<Chunk> getChunks() {
         return chunks;
     }
 
@@ -39,16 +39,20 @@ public class FileMetadata {
             .anyMatch(Chunk::isLocal);
     }
 
-    public String getChecksum() {
+    synchronized public String getChecksum() {
         return checksum;
     }
 
-    public void setChecksum(String checksum) {
+    synchronized public void setChecksum(String checksum) {
         this.checksum = checksum;
     }
 
-    public String getFilePath() {
+    synchronized public String getFilePath() {
         return filePath;
+    }
+
+    synchronized public void setFilePath(String filePath) {
+        this.filePath = filePath;
     }
 
     public String getFileName() {
@@ -63,11 +67,7 @@ public class FileMetadata {
         return fileId;
     }
 
-    public boolean hasChecksum() {
+    synchronized public boolean hasChecksum() {
         return checksum != null && ! checksum.equals("");
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
     }
 }

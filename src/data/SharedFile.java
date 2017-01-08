@@ -39,11 +39,11 @@ public class SharedFile implements Observable<FileMetadata> {
         this.isLocal = isLocal;
     }
 
-    public String getFilePath() {
+    synchronized public String getFilePath() {
         return metadata.getFilePath();
     }
 
-    public void setFilePath(String filePath) {
+    synchronized public void setFilePath(String filePath) {
         metadata.setFilePath(filePath);
     }
 
@@ -59,11 +59,11 @@ public class SharedFile implements Observable<FileMetadata> {
         return metadata.getChecksum();
     }
 
-    public boolean isLocal() {
+    synchronized public boolean isLocal() {
         return isLocal;
     }
 
-    public void setLocal(boolean local) {
+    synchronized public void setLocal(boolean local) {
         isLocal = local;
     }
 
@@ -71,11 +71,11 @@ public class SharedFile implements Observable<FileMetadata> {
         return metadata.getFileId();
     }
 
-    public Map<UUID, List<String>> getReplicaNodes() {
+    synchronized public Map<UUID, List<String>> getReplicaNodes() {
         return replicaNodes;
     }
 
-    public void addReplicaNode(UUID nodeId, List<String> chunkChecksums) {
+    synchronized public void addReplicaNode(UUID nodeId, List<String> chunkChecksums) {
         if (chunkChecksums == null || chunkChecksums.size() < 1) {
             return;
         }
@@ -107,10 +107,14 @@ public class SharedFile implements Observable<FileMetadata> {
             .collect(Collectors.toList());
     }
 
-    public Chunk getChunk(String chunkChecksum) {
+    synchronized public Chunk getChunk(String chunkChecksum) {
         return metadata.getChunks().stream()
             .filter(c -> c.getChecksum().equals(chunkChecksum))
             .findFirst().orElse(null);
+    }
+
+    public long getFileSize() {
+        return metadata.getFileSize();
     }
 
     @Override
@@ -134,9 +138,5 @@ public class SharedFile implements Observable<FileMetadata> {
     @Override
     public void notifyObservers(FileMetadata data, ObserverCmd cmd) {
         observers.forEach(o -> o.update(data, cmd));
-    }
-
-    public long getFileSize() {
-        return metadata.getFileSize();
     }
 }
