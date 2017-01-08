@@ -18,12 +18,7 @@ public class ChunkProgressController implements Observer<FileMetadata> {
     private static final Logger log = Logger.getLogger(ChunkProgressController.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
-    private String fileId;
     private ProgressDialog progressDialog;
-
-    public ChunkProgressController(String fileId) {
-        this.fileId = fileId;
-    }
 
     @Override
     synchronized public void update(FileMetadata data, ObserverCmd cmd) {

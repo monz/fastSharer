@@ -43,10 +43,10 @@ public class DiscoveryService implements Service {
         this.receiver = new Thread(receiveHello);
         this.sender = Executors.newSingleThreadScheduledExecutor();
         this.nodeCleaner = Executors.newSingleThreadScheduledExecutor();
-        this.localIps = extractLocalAdresses();
+        this.localIps = extractLocalAddresses();
     }
 
-    private List<String> extractLocalAdresses() {
+    private List<String> extractLocalAddresses() {
         Enumeration<NetworkInterface> interfaces;
         try {
             interfaces = NetworkInterface.getNetworkInterfaces();

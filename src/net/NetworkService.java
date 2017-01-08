@@ -188,9 +188,4 @@ public class NetworkService {
     synchronized public Node getNode(UUID nodeId) {
         return nodes.get(nodeId);
     }
-
-    synchronized public int getActiveUploads() {
-        // TODO: implement
-        return -1;
-    }
 }

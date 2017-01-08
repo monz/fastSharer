@@ -55,19 +55,9 @@ public class CommandDispatcher {
                         case DOWNLOAD_REQUEST_RESULT:
                             w = new DownloadResultWorker(cmd.getData());
                             break;
-//                        case DOWNLOAD_FILE:
-//                            w = new DownloadFileWorker(cmd.getData());
-//                            break;
                         case PUSH_SHARE_LIST:
-                            //w = new SimplePrintWorker(cmd.serialize());
                             w = new SharedListWorker(cmd.getData());
                             break;
-//                        case CHUNK_INFO_REQUEST:
-//                            w = new ChunkInfoRequestWorker(cmd.getData());
-//                            break;
-//                        case CHUNK_INFO_REQUEST_RESULT:
-//                            w = new ChunkInfoResultWorker(cmd.getData());
-//                            break;
                         default:
                             log.info("Unknown command to dispatch: " + cmd.getCmd());
                             continue;
@@ -121,18 +111,9 @@ public class CommandDispatcher {
                 case DOWNLOAD_REQUEST_RESULT:
                     type = new TypeToken<ShareCommand<DownloadRequestResult>>() {}.getType();
                     break;
-//                case DOWNLOAD_FILE:
-//                    type = new TypeToken<ShareCommand<DownloadRequestResult>>() {}.getType();
-//                    break;
                 case PUSH_SHARE_LIST:
                     type = new TypeToken<ShareCommand<SharedFile>>() {}.getType();
                     break;
-//                case CHUNK_INFO_REQUEST:
-//                    type = new TypeToken<ShareCommand<ChunkInfoRequest>>() {}.getType();
-//                    break;
-//                case CHUNK_INFO_REQUEST_RESULT:
-//                    type = new TypeToken<ShareCommand<ChunkInfoRequestResult>>() {}.getType();
-//                    break;
                 default:
                     type = null;
                     break;

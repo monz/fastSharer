@@ -2,10 +2,10 @@ package local.impl;
 
 import data.FileMetadata;
 import data.SharedFile;
+import local.ChecksumService;
 import local.ServiceLocator;
 import local.SharedFileService;
 import local.decl.Observer;
-import util.FileHelper;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -56,7 +56,7 @@ public class FileChecksumObserver implements Observer<FileMetadata> {
             md.update(c.getChecksum().getBytes());
         });
 
-        String finalChecksum = FileHelper.digestToString(md.digest());
+        String finalChecksum = ChecksumService.digestToString(md.digest());
         data.setChecksum(finalChecksum);
 
         log.info(String.format("Final checksum of file '%s': %s", data.getFileName(), finalChecksum));

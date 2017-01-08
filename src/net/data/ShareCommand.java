@@ -16,9 +16,6 @@ public class ShareCommand<T> {
         PUSH_SHARE_LIST,
         DOWNLOAD_REQUEST,
         DOWNLOAD_REQUEST_RESULT,
-        DOWNLOAD_FILE,
-        CHUNK_INFO_REQUEST,
-        CHUNK_INFO_REQUEST_RESULT,
     }
 
     @Expose private ShareCommandType cmd;

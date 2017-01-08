@@ -10,7 +10,6 @@ import net.data.DownloadRequest;
 import net.data.DownloadRequestResult;
 import net.data.Node;
 import net.data.ShareCommand;
-import util.FileHelper;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -235,7 +234,7 @@ public class ShareService implements AddFileListener {
         outputFile.close();
         is.close();
 
-        return FileHelper.digestToString(md.digest());
+        return ChecksumService.digestToString(md.digest());
     }
 
     private Runnable upload(DownloadRequest r) {

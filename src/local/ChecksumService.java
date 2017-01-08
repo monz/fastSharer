@@ -2,7 +2,6 @@ package local;
 
 import data.Chunk;
 import data.SharedFile;
-import util.FileHelper;
 
 import java.io.BufferedInputStream;
 import java.io.FileInputStream;
@@ -21,6 +20,7 @@ import java.util.logging.Logger;
 public class ChecksumService {
     private static final Logger log = Logger.getLogger(ChecksumService.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
+    private static final int MD5_LENGTH = 32;
 
     private ExecutorService executor;
     private String checksumAlgorithm;
@@ -28,6 +28,22 @@ public class ChecksumService {
     public ChecksumService(String checksumAlgorithm) {
         this.executor = Executors.newSingleThreadExecutor();
         this.checksumAlgorithm = checksumAlgorithm;
+    }
+
+    public static String digestToString(byte[] digest) {
+
+        // convert byte[] to string; hex value
+        StringBuffer checksum = new StringBuffer(MD5_LENGTH);
+        String s;
+        for (byte b : digest) {
+            s = Integer.toHexString(0xFF & b);
+            if (s.length() == 1) {
+                checksum.append('0');
+            }
+            checksum.append(s);
+        }
+
+        return checksum.toString();
     }
 
     private Runnable handleChunk(Chunk c) {
@@ -67,9 +83,13 @@ public class ChecksumService {
             return null;
         }
 
-        checksums.forEach(s -> md.update(s.getBytes()));
+        checksums.forEach(s -> {
+            if (s != null && ! s.equals("")) {
+                md.update(s.getBytes());
+            }
+        });
 
-        return FileHelper.digestToString(md.digest());
+        return digestToString(md.digest());
     }
 
     /**
@@ -116,7 +136,7 @@ public class ChecksumService {
             }
 
             md.update(b, 0, len);
-            checksum = FileHelper.digestToString(md.digest());
+            checksum = digestToString(md.digest());
 
         } catch (IOException e) {
             log.log(Level.SEVERE, "Could not read bytes of file.", e);

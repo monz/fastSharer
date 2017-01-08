@@ -72,14 +72,6 @@ public class Chunk {
         this.checksum = checksum;
     }
 
-    synchronized public void setOffset(long offset) {
-        this.offset = offset;
-    }
-
-    synchronized public void setSize(long size) {
-        this.size = size;
-    }
-
     synchronized public long getOffset() {
         return offset;
     }

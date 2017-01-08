@@ -23,7 +23,7 @@ public class FileService {
                 continue;
             }
 
-            if (isFileInList(file)) {
+            if (SHARED_FILE_SERVICE.isFileShared(file)) {
                 log.info("File was not added, maybe already in list.");
                 continue;
             }
@@ -44,9 +44,4 @@ public class FileService {
             CHUNK_SUM_SERVICE.setChecksums(metadata.getChunks());
         }
     }
-
-    private boolean isFileInList(File file) {
-        return SHARED_FILE_SERVICE.isFileShared(file);
-    }
-
 }

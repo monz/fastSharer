@@ -45,7 +45,7 @@ public class SharedFileService {
 
         // register observers for shared file
         sharedFile.addObserver(new FileChecksumObserver(checksumAlgorithm));
-        sharedFile.addObserver(new ChunkProgressController(metadata.getFileId()));
+        sharedFile.addObserver(new ChunkProgressController());
 
         // notify listeners
         fileListeners.forEach(l -> l.addedLocalFile(sharedFile));
@@ -102,10 +102,6 @@ public class SharedFileService {
 
     synchronized public Map<String, SharedFile> getAll() {
         return sharedFiles;
-    }
-
-    public boolean isFileShared(String fileId) {
-        return sharedFiles.get(fileId) != null;
     }
 
     boolean isFileShared(File file) {

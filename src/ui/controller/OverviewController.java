@@ -36,30 +36,12 @@ public class OverviewController implements AddFileListener, NodeStateListener {
         return instance;
     }
 
-    public static OverviewController TEST_newShareControllerInstance() {
-        instance = new OverviewController();
-        return instance;
-    }
-
     public DefaultListModel<String> getFileListModel() {
         return FILE_LIST_MODEL;
     }
 
     public DefaultListModel<String> getNodeListModel() {
         return NODE_LIST_MODEL;
-    }
-
-    synchronized public void addFile(String filepath) {
-        // due to swing weirdness (not thread safe) have to run on EDT (Event Dispatch Thread)
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                if (FILE_LIST_MODEL.contains(filepath)) {
-                    return;
-                }
-                FILE_LIST_MODEL.addElement(filepath);
-            }
-        });
     }
 
     synchronized public void updateSharerId(String id) {

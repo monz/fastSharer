@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.UUID;
 
 public class FileMetadata {
-    public static final String UNKNOWN_FILE_ID = null;
-
     @Expose private String fileId;
     @Expose private long fileSize;
     @Expose private String checksum;
@@ -61,16 +59,8 @@ public class FileMetadata {
         return fileSize;
     }
 
-    public void setFileSize(long fileSize) {
-        this.fileSize = fileSize;
-    }
-
     public String getFileId() {
         return fileId;
-    }
-
-    public int getExpectedChunkCount() {
-        return Chunk.getChunkCount(fileSize);
     }
 
     public boolean hasChecksum() {
