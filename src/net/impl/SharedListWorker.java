@@ -12,7 +12,7 @@ public class SharedListWorker extends Worker<List<SharedFile>> {
     private static final Logger log = Logger.getLogger(SharedListWorker.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
-    public SharedListWorker(List data) {
+    public SharedListWorker(List<SharedFile> data) {
         super(data);
     }
 
@@ -28,7 +28,7 @@ public class SharedListWorker extends Worker<List<SharedFile>> {
 //            return sf;
 //        }).forEach(SHARED_FILE_SERVICE::handleRemotePath);
 
-        log.info("Received remote file: " + data.get(0).getFilename());
+        log.info(String.format("Received remote file: ", data.get(0).getFilename()));
         data.forEach(SHARED_FILE_SERVICE::addRemoteFile);
     }
 }

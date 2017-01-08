@@ -9,10 +9,12 @@ import ui.Overview;
 import ui.controller.OverviewController;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Properties;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Sharer {
@@ -25,8 +27,8 @@ public class Sharer {
     public static final String NODE_CLEANUP_RATE = "sharer_discovery_node_cleanup_period";
     public static final String CMD_PORT = "sharer_cmd_port";
 
-    public static final String MAX_INCOMING_CONNECTIONS = "sharer_max_incoming_connections";
-    public static final String MAX_OUTGOING_CONNECTIONS = "sharer_max_outgoing_connections";
+    public static final String MAX_DOWNLOADS = "sharer_max_downloads";
+    public static final String MAX_UPLOADS = "sharer_max_uploads";
     public static final String DOWNLOAD_DIRECTORY = "sharer_download_directory";
 
     private static final Logger log = Logger.getLogger(Sharer.class.getName());
@@ -44,6 +46,14 @@ public class Sharer {
         } catch (IOException e) {
             e.printStackTrace();
             return;
+        }
+
+        // create download directory if not exists
+        try {
+            Files.createDirectories(Paths.get(config.getProperty(DOWNLOAD_DIRECTORY)));
+        } catch (IOException e) {
+            log.log(Level.SEVERE, "Could not create download directory", e);
+            System.exit(1);
         }
 
         // init service locator - start services
@@ -68,7 +78,7 @@ public class Sharer {
 
         // register observer for shared files
         SharedFileService sharedFileService = ((SharedFileService) serviceLocator.getService(ServiceLocator.SHARED_FILE_SERVICE));
-        sharedFileService.addFileListener((DownloadService)serviceLocator.getService(ServiceLocator.DOWNLOAD_SERVICE));
+        sharedFileService.addFileListener((ShareService)serviceLocator.getService(ServiceLocator.SHARE_SERVICE));
 
         // set Sharer id on gui
         NetworkService networkService = ((NetworkService)serviceLocator.getService(ServiceLocator.NETWORK_SERVICE));

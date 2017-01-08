@@ -21,7 +21,7 @@ public class ServiceLocator {
     public static final String DISCOVERY_SERVICE = "discoveryService";
     public static final String SHARED_FILE_INFO_SERVICE = "shareFileInfoService";
     public static final String SHARED_CMD_RECEIVER_SERVICE = "shareCmdReceiverService";
-    public static final String DOWNLOAD_SERVICE = "downloadService";
+    public static final String SHARE_SERVICE = "shareService";
 
     private static Map<String, Object> services;
     private static ServiceLocator instance;
@@ -44,8 +44,8 @@ public class ServiceLocator {
     private static void init() {
 
         int cmdPort = Integer.parseInt(config.getProperty(Sharer.CMD_PORT));
-        int maxConcurrentDownloads = Integer.parseInt(config.getProperty(Sharer.MAX_INCOMING_CONNECTIONS));
-        int maxOutgoingConnections = Integer.parseInt(config.getProperty(Sharer.MAX_OUTGOING_CONNECTIONS));
+        int maxConcurrentDownloads = Integer.parseInt(config.getProperty(Sharer.MAX_DOWNLOADS));
+        int maxConcurrentUploads = Integer.parseInt(config.getProperty(Sharer.MAX_UPLOADS));
         int discoveryPort = Integer.parseInt(config.getProperty(Sharer.DISCOVERY_PORT));
         long discoveryPeriod = Long.parseLong(config.getProperty(Sharer.DISCOVERY_PERIOD));
         long shareInfoPeriod = Long.parseLong(config.getProperty(Sharer.SHARE_INFO_PERIOD));
@@ -56,7 +56,7 @@ public class ServiceLocator {
         services.put(SHARED_FILE_SERVICE, new SharedFileService(downloadDirectory));
         services.put(NETWORK_SERVICE, new NetworkService(cmdPort));
         services.put(SHARED_FILE_INFO_SERVICE, new SharedFileInfoService(shareInfoPeriod)); // depends on network service, shared file service
-        services.put(DOWNLOAD_SERVICE, new DownloadService(maxConcurrentDownloads)); // depends on network service
+        services.put(SHARE_SERVICE, new ShareService(maxConcurrentDownloads, maxConcurrentUploads)); // depends on network service
         services.put(CHUNK_SUM_SERVICE, new ChunkSumService()); // depends on shared file service
         services.put(FILE_SERVICE, new FileService()); // depends on shared file service, chunk sum service
 

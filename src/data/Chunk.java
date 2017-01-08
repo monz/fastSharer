@@ -118,4 +118,8 @@ public class Chunk {
     public boolean hasChecksum() {
         return checksum != null && ! checksum.equals("");
     }
+
+    public void setFileId(String fileId) {
+        this.fileId = fileId;
+    }
 }

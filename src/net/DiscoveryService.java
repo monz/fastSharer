@@ -7,7 +7,9 @@ import net.decl.Service;
 import java.io.IOException;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -27,6 +29,7 @@ public class DiscoveryService implements Service {
     private Thread receiver;
     private ScheduledExecutorService sender;
     private ScheduledExecutorService nodeCleaner;
+    private List<String> localIps;
 
     private long initialDelay;
     private long period;
@@ -40,6 +43,30 @@ public class DiscoveryService implements Service {
         this.receiver = new Thread(receiveHello);
         this.sender = Executors.newSingleThreadScheduledExecutor();
         this.nodeCleaner = Executors.newSingleThreadScheduledExecutor();
+        this.localIps = extractLocalAdresses();
+    }
+
+    private List<String> extractLocalAdresses() {
+        Enumeration<NetworkInterface> interfaces;
+        try {
+            interfaces = NetworkInterface.getNetworkInterfaces();
+
+            List<String> ips = new ArrayList<>();
+            while(interfaces.hasMoreElements()) {
+                NetworkInterface networkInterface = interfaces.nextElement();
+                if (networkInterface.isLoopback() || !networkInterface.isUp()) {
+                    continue; // Don't want to broadcast to the loopback interface
+                }
+
+                for (InterfaceAddress interfaceAddress : networkInterface.getInterfaceAddresses()) {
+                    ips.add(interfaceAddress.getAddress().getHostAddress());
+                }
+            }
+
+            return ips;
+        } catch (SocketException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -66,6 +93,9 @@ public class DiscoveryService implements Service {
             while (!receiver.isInterrupted()) {
                 try {
                     Node node = extractNodeFromMessage();
+                    if (node == null) {
+                        continue;
+                    }
 
                     if ( id.equals(node.getId()) ) {
                         // ignore own node id
@@ -156,7 +186,11 @@ public class DiscoveryService implements Service {
         DatagramPacket packet = new DatagramPacket(helloMsg, HELLO_MSG_SIZE);
         s.receive(packet);
 
-        Node node = new Node(UUID.fromString(byteToString(helloMsg)), packet.getAddress().getHostAddress());
+        // for debug: if message was received from local ip, skip node
+        Node node = null;
+        if (! localIps.contains(packet.getAddress().getHostAddress())) {
+            node = new Node(UUID.fromString(byteToString(helloMsg)), packet.getAddress().getHostAddress());
+        }
 
         return node;
     }

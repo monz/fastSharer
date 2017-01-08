@@ -2,8 +2,12 @@ package net;
 
 import com.google.gson.reflect.TypeToken;
 import data.SharedFile;
+import net.data.DownloadRequest;
+import net.data.DownloadRequestResult;
 import net.data.ShareCommand;
 import net.decl.Worker;
+import net.impl.DownloadRequestWorker;
+import net.impl.DownloadResultWorker;
 import net.impl.SharedListWorker;
 
 import java.io.BufferedReader;
@@ -45,12 +49,12 @@ public class CommandDispatcher {
                     }
                     Worker w;
                     switch (cmd.getCmd()) {
-//                        case DOWNLOAD_REQUEST:
-//                            w = new DownloadRequestWorker(cmd.getData());
-//                            break;
-//                        case DOWNLOAD_REQUEST_RESULT:
-//                            w = new DownloadResultWorker(cmd.getData());
-//                            break;
+                        case DOWNLOAD_REQUEST:
+                            w = new DownloadRequestWorker(cmd.getData());
+                            break;
+                        case DOWNLOAD_REQUEST_RESULT:
+                            w = new DownloadResultWorker(cmd.getData());
+                            break;
 //                        case DOWNLOAD_FILE:
 //                            w = new DownloadFileWorker(cmd.getData());
 //                            break;
@@ -111,12 +115,12 @@ public class CommandDispatcher {
 
             Type type;
             switch(cmdType) {
-//                case DOWNLOAD_REQUEST:
-//                    type = new TypeToken<ShareCommand<DownloadRequest>>() {}.getType();
-//                    break;
-//                case DOWNLOAD_REQUEST_RESULT:
-//                    type = new TypeToken<ShareCommand<DownloadRequestResult>>() {}.getType();
-//                    break;
+                case DOWNLOAD_REQUEST:
+                    type = new TypeToken<ShareCommand<DownloadRequest>>() {}.getType();
+                    break;
+                case DOWNLOAD_REQUEST_RESULT:
+                    type = new TypeToken<ShareCommand<DownloadRequestResult>>() {}.getType();
+                    break;
 //                case DOWNLOAD_FILE:
 //                    type = new TypeToken<ShareCommand<DownloadRequestResult>>() {}.getType();
 //                    break;

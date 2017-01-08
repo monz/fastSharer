@@ -79,6 +79,9 @@ public class SharedFileService {
             return sf1;
         });
 
+        // add fileId to not downloaded chunks
+        sharedFile.getChunksToDownload().forEach(c -> c.setFileId(sharedFile.getFileId()));
+
         // notify listeners
         fileListeners.forEach(l -> l.addedRemoteFile(sharedFile));
     }
@@ -95,7 +98,7 @@ public class SharedFileService {
         return sharedFiles;
     }
 
-    boolean isFileShared(String fileId) {
+    public boolean isFileShared(String fileId) {
         return sharedFiles.get(fileId) != null;
     }
 

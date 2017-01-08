@@ -103,6 +103,12 @@ public class SharedFile implements Observable<FileMetadata> {
             .collect(Collectors.toList());
     }
 
+    public Chunk getChunk(String chunkChecksum) {
+        return metadata.getChunks().stream()
+            .filter(c -> c.getChecksum().equals(chunkChecksum))
+            .findFirst().orElse(null);
+    }
+
     @Override
     public void addObserver(Observer observer) {
         if (observers.contains(observer)) {
@@ -124,5 +130,9 @@ public class SharedFile implements Observable<FileMetadata> {
     @Override
     public void notifyObservers(FileMetadata data, ObserverCmd cmd) {
         observers.forEach(o -> o.update(data, cmd));
+    }
+
+    public long getFileSize() {
+        return metadata.getFileSize();
     }
 }
