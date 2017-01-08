@@ -18,9 +18,11 @@ public class SharedFileService {
     private Map<String, SharedFile> sharedFiles = new HashMap<>();
     private List<AddFileListener> fileListeners = new ArrayList<>();
     private String downloadDirectory;
+    private String checksumAlgorithm;
 
-    public SharedFileService(String downloadDirectory) {
+    public SharedFileService(String downloadDirectory, String checksumAlgorithm) {
         this.downloadDirectory = downloadDirectory;
+        this.checksumAlgorithm = checksumAlgorithm;
     }
 
     public void addFileListener(AddFileListener listener) {
@@ -42,7 +44,7 @@ public class SharedFileService {
         sharedFiles.put(metadata.getFileId(), sharedFile);
 
         // register observers for shared file
-        sharedFile.addObserver(new FileChecksumObserver());
+        sharedFile.addObserver(new FileChecksumObserver(checksumAlgorithm));
         sharedFile.addObserver(new ChunkProgressController(metadata.getFileId()));
 
         // notify listeners
@@ -84,6 +86,10 @@ public class SharedFileService {
 
         // notify listeners
         fileListeners.forEach(l -> l.addedRemoteFile(sharedFile));
+    }
+
+    public String getDownloadDirectory() {
+        return downloadDirectory;
     }
 
     public String getFilePath(String fileId) {

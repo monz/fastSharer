@@ -10,56 +10,75 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.concurrent.BlockingQueue;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ChunkSumService {
-    private static final Logger log = Logger.getLogger(ChunkSumService.class.getName());
+public class ChecksumService {
+    private static final Logger log = Logger.getLogger(ChecksumService.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
-    private BlockingQueue<Chunk> queue = new LinkedBlockingQueue<>();
-    private ExecutorService threadPool;
-    private Thread service;
+    private ExecutorService executor;
+    private String checksumAlgorithm;
 
-    public ChunkSumService() {
-        threadPool = Executors.newSingleThreadExecutor();
-        service = new Thread(handleChunk);
+    public ChecksumService(String checksumAlgorithm) {
+        this.executor = Executors.newSingleThreadExecutor();
+        this.checksumAlgorithm = checksumAlgorithm;
     }
 
-    public void start() {
-        log.info("Start ChunkSumService");
-
-        service.start();
-    }
-
-    private Runnable handleChunk = () -> {
-        while(true) {
-            Chunk c;
-            try {
-                c = queue.take();
-            } catch (InterruptedException e) {
-                log.log(Level.INFO, "", e);
-                continue;
-            }
-
+    private Runnable handleChunk(Chunk c) {
+        return () -> {
             // calculate checksum
-            threadPool.execute(() -> {
+            executor.execute(() -> {
                 c.setChecksum(calculateChecksum(c));
 
                 // update metadata observers
                 SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(c.getFileId());
                 sharedFile.notifyObservers(sharedFile.getMetadata());
             });
-        }
-    };
+        };
+    }
 
-    public void addAll(Collection<Chunk> chunks) {
-        chunks.forEach(queue::offer);
+    public boolean compareChecksum(SharedFile sharedFile, String checksum) {
+        String fileChecksum = calculateChecksum(sharedFile);
+        boolean isEqualChecksum = checksum.equals(fileChecksum);
+
+        log.info("Check checksum, expected: " + checksum + " and actual: " + fileChecksum + ", success: " + isEqualChecksum);
+
+        return isEqualChecksum;
+    }
+
+    private String calculateChecksum(SharedFile sharedFile) {
+        List<String> checksums = new ArrayList<>();
+        sharedFile.getMetadata().getChunks().forEach(c -> {
+                checksums.add(calculateChecksum(c));
+        });
+
+        // prepare message digest
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance(checksumAlgorithm);
+        } catch (NoSuchAlgorithmException e) {
+            log.log(Level.WARNING, "Hash algorithm not found!", e);
+            return null;
+        }
+
+        checksums.forEach(s -> md.update(s.getBytes()));
+
+        return FileHelper.digestToString(md.digest());
+    }
+
+    /**
+     * SetChecksums calculate the checksum of given chunks async
+     * Calculated checksum is stored in chunk
+     * @param chunks
+     */
+    void setChecksums(Collection<Chunk> chunks) {
+        chunks.forEach(c -> executor.execute(handleChunk(c)));
     }
 
     private String calculateChecksum(Chunk c) {
@@ -90,9 +109,9 @@ public class ChunkSumService {
             // prepare message digest
             MessageDigest md;
             try {
-                md = MessageDigest.getInstance("MD5");
+                md = MessageDigest.getInstance(checksumAlgorithm);
             } catch (NoSuchAlgorithmException e) {
-                log.log(Level.WARNING, "Hash algorithm MD5 not found!", e);
+                log.log(Level.WARNING, "Hash algorithm not found!", e);
                 return null;
             }
 

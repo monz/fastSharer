@@ -20,6 +20,12 @@ public class FileChecksumObserver implements Observer<FileMetadata> {
     private static final Logger log = Logger.getLogger(FileChecksumObserver.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
+    private String checksumAlgorithm;
+
+    public FileChecksumObserver(String checksumAlgorithm) {
+        this.checksumAlgorithm = checksumAlgorithm;
+    }
+
     @Override
     public void update(FileMetadata data, ObserverCmd cmd) {
         SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(data.getFileId());
@@ -39,9 +45,9 @@ public class FileChecksumObserver implements Observer<FileMetadata> {
         // prepare message digest
         MessageDigest md;
         try {
-            md = MessageDigest.getInstance("MD5");
+            md = MessageDigest.getInstance(checksumAlgorithm);
         } catch (NoSuchAlgorithmException e) {
-            log.log(Level.WARNING, "Hash algorithm MD5 not found!", e);
+            log.log(Level.WARNING, "Hash algorithm not found!", e);
             return;
         }
 

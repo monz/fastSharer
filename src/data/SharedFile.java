@@ -55,6 +55,10 @@ public class SharedFile implements Observable<FileMetadata> {
         return metadata.getFileName();
     }
 
+    public String getChecksum() {
+        return metadata.getChecksum();
+    }
+
     public boolean isLocal() {
         return isLocal;
     }

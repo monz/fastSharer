@@ -16,7 +16,7 @@ public class ServiceLocator {
 
     public static final String FILE_SERVICE = "fileService";
     public static final String SHARED_FILE_SERVICE = "sharedFileService";
-    public static final String CHUNK_SUM_SERVICE = "chunkSumService";
+    public static final String CHECKSUM_SERVICE = "checksumService";
     public static final String NETWORK_SERVICE = "networkService";
     public static final String DISCOVERY_SERVICE = "discoveryService";
     public static final String SHARED_FILE_INFO_SERVICE = "shareFileInfoService";
@@ -50,14 +50,15 @@ public class ServiceLocator {
         long discoveryPeriod = Long.parseLong(config.getProperty(Sharer.DISCOVERY_PERIOD));
         long shareInfoPeriod = Long.parseLong(config.getProperty(Sharer.SHARE_INFO_PERIOD));
         String downloadDirectory = config.getProperty(Sharer.DOWNLOAD_DIRECTORY);
+        String checksumAlgorithm = config.getProperty(Sharer.CHECKSUM_ALGORITHM);
 
         services = new HashMap<>();
 
-        services.put(SHARED_FILE_SERVICE, new SharedFileService(downloadDirectory));
+        services.put(SHARED_FILE_SERVICE, new SharedFileService(downloadDirectory, checksumAlgorithm));
         services.put(NETWORK_SERVICE, new NetworkService(cmdPort));
         services.put(SHARED_FILE_INFO_SERVICE, new SharedFileInfoService(shareInfoPeriod)); // depends on network service, shared file service
-        services.put(SHARE_SERVICE, new ShareService(maxConcurrentDownloads, maxConcurrentUploads)); // depends on network service
-        services.put(CHUNK_SUM_SERVICE, new ChunkSumService()); // depends on shared file service
+        services.put(CHECKSUM_SERVICE, new ChecksumService(checksumAlgorithm)); // depends on shared file service
+        services.put(SHARE_SERVICE, new ShareService(maxConcurrentDownloads, maxConcurrentUploads, checksumAlgorithm)); // depends on network service, checksum service
         services.put(FILE_SERVICE, new FileService()); // depends on shared file service, chunk sum service
 
         try {

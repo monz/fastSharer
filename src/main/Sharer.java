@@ -1,6 +1,5 @@
 package main;
 
-import local.ChunkSumService;
 import local.ServiceLocator;
 import local.SharedFileService;
 import net.*;
@@ -30,6 +29,7 @@ public class Sharer {
     public static final String MAX_DOWNLOADS = "sharer_max_downloads";
     public static final String MAX_UPLOADS = "sharer_max_uploads";
     public static final String DOWNLOAD_DIRECTORY = "sharer_download_directory";
+    public static final String CHECKSUM_ALGORITHM = "sharer_checksum_algorithm";
 
     private static final Logger log = Logger.getLogger(Sharer.class.getName());
 
@@ -59,10 +59,6 @@ public class Sharer {
         // init service locator - start services
         ServiceLocator.init(config);
         ServiceLocator serviceLocator = ServiceLocator.getInstance();
-
-        // start chunk sum service
-        ChunkSumService chunkSumService = ((ChunkSumService) serviceLocator.getService(ServiceLocator.CHUNK_SUM_SERVICE));
-        chunkSumService.start();
 
         // start discovery service
         DiscoveryService discoveryService = ((DiscoveryService) serviceLocator.getService(ServiceLocator.DISCOVERY_SERVICE));

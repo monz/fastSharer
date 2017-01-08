@@ -11,7 +11,7 @@ import java.util.logging.Logger;
 public class FileService {
     private static final Logger log = Logger.getLogger(FileService.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
-    private static final ChunkSumService CHUNK_SUM_SERVICE = (ChunkSumService) ServiceLocator.getInstance().getService(ServiceLocator.CHUNK_SUM_SERVICE);
+    private static final ChecksumService CHUNK_SUM_SERVICE = (ChecksumService) ServiceLocator.getInstance().getService(ServiceLocator.CHECKSUM_SERVICE);
 
     public void handleDroppedPaths(List<File> fileList) {
         for (File file : fileList) {
@@ -41,7 +41,7 @@ public class FileService {
             SHARED_FILE_SERVICE.addLocalFile(metadata);
 
             // start chunk checksum calculation
-            CHUNK_SUM_SERVICE.addAll(metadata.getChunks());
+            CHUNK_SUM_SERVICE.setChecksums(metadata.getChunks());
         }
     }
 
