@@ -55,7 +55,7 @@ public class ServiceLocator {
         services = new HashMap<>();
 
         services.put(SHARED_FILE_SERVICE, new SharedFileService(downloadDirectory, checksumAlgorithm));
-        services.put(NETWORK_SERVICE, new NetworkService(cmdPort));
+        services.put(NETWORK_SERVICE, new NetworkService(cmdPort)); // depends on shared file service
         services.put(SHARED_FILE_INFO_SERVICE, new SharedFileInfoService(shareInfoPeriod)); // depends on network service, shared file service
         services.put(CHECKSUM_SERVICE, new ChecksumService(checksumAlgorithm)); // depends on shared file service
         services.put(SHARE_SERVICE, new ShareService(maxConcurrentDownloads, maxConcurrentUploads, checksumAlgorithm)); // depends on network service, checksum service

@@ -35,7 +35,7 @@ public class FileMetadata {
 
     synchronized public boolean isChunkLocal(String checksum) {
         return chunks.stream()
-            .filter(c -> c.getChecksum().equals(checksum))
+            .filter(c -> c.getChecksum() != null && c.getChecksum().equals(checksum))
             .anyMatch(Chunk::isLocal);
     }
 

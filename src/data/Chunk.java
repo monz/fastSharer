@@ -15,8 +15,13 @@ public class Chunk {
     @Expose private long size;
 
     private String fileId;
-    private boolean isLocal;
-    private boolean downloadActive;
+    private boolean isLocal = false;
+    private boolean downloadActive = false;
+
+    public Chunk() {
+        // empty constructor required for GSON
+        // otherwise the members wont get initialized
+    }
 
     public Chunk(String fileId, long offset, long size) {
         this.fileId = fileId;
@@ -49,6 +54,7 @@ public class Chunk {
         }
         return success;
     }
+
     synchronized public boolean deactivateDownload() {
         boolean success;
         if (downloadActive) {
@@ -86,6 +92,9 @@ public class Chunk {
 
     @Override
     synchronized public boolean equals(Object o) {
+        if (o == null || !(o instanceof Chunk) || checksum == null) {
+            return false;
+        }
         return this.checksum.equals(((Chunk) o).getChecksum());
     }
 

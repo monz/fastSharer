@@ -51,18 +51,25 @@ public class SharedFileService {
         fileListeners.forEach(l -> l.addedLocalFile(sharedFile));
     }
 
-    synchronized public void addRemoteFile(SharedFile sharedFile) {
-        if (sharedFile == null || sharedFile.getMetadata() == null || sharedFiles.get(sharedFile.getFileId()) != null) {
+    synchronized public void addRemoteFile(SharedFile remoteSharedFile) {
+        // check whether the object is valid
+        if (remoteSharedFile == null || remoteSharedFile.getMetadata() == null) {
             return;
         }
 
-        log.info(String.format("Added remote file: '%s' to shared files", sharedFile.getFilename()));
+        // check whether the file is local (already downloaded)
+        SharedFile localSharedFile = sharedFiles.get(remoteSharedFile.getFileId());
+        if (localSharedFile != null && localSharedFile.isLocal()) {
+            return;
+        }
+
+        log.info(String.format("Added remote file: '%s' to shared files", remoteSharedFile.getFilename()));
 
         // set file path
-        sharedFile.setFilePath(Paths.get(downloadDirectory, sharedFile.getFilename()).toString());
+        remoteSharedFile.setFilePath(Paths.get(downloadDirectory, remoteSharedFile.getFilename()).toString());
 
         // add to shared files map, if exists update shared file
-        sharedFiles.merge(sharedFile.getFileId(), sharedFile, (sf1, sf2) -> {
+        SharedFile updatedSharedFile = sharedFiles.merge(remoteSharedFile.getFileId(), remoteSharedFile, (sf1, sf2) -> {
             if (sf2 == null) {
                 return sf1;
             }
@@ -75,17 +82,19 @@ public class SharedFileService {
             // merge chunks
             List<Chunk> newChunks = sf2.getMetadata().getChunks();
             if (newChunks != null) {
-                sf1.getMetadata().getChunks().removeAll(newChunks); // remove duplicates
+                newChunks.removeAll(sf1.getMetadata().getChunks()); // remove duplicates
             }
-            sf1.getMetadata().getChunks().addAll(sf2.getMetadata().getChunks());
+            sf1.getMetadata().getChunks().addAll(newChunks);
             return sf1;
         });
 
         // add fileId to not downloaded chunks
-        sharedFile.getChunksToDownload().forEach(c -> c.setFileId(sharedFile.getFileId()));
+        if (updatedSharedFile != null) {
+            updatedSharedFile.getChunksToDownload().forEach(c -> c.setFileId(remoteSharedFile.getFileId()));
+        }
 
         // notify listeners
-        fileListeners.forEach(l -> l.addedRemoteFile(sharedFile));
+        fileListeners.forEach(l -> l.addedRemoteFile(updatedSharedFile));
     }
 
     public String getDownloadDirectory() {
@@ -106,12 +115,12 @@ public class SharedFileService {
 
     synchronized boolean isFileShared(File file) {
         // check whether a file with given path exists already
-        return sharedFiles.values().stream().anyMatch(sf -> sf.getFilePath().equals(file.getAbsolutePath()));
+        return sharedFiles.values().stream().anyMatch(sf -> sf.getFilename().equals(file.getName()));
     }
 
     synchronized public void removeNodeFromReplicaNodes(UUID nodeId) {
         sharedFiles.values().forEach(sf -> {
-            sf.getReplicaNodes().remove(nodeId);
+            sf.removeReplicaNode(nodeId);
         });
     }
 }

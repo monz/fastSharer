@@ -19,6 +19,7 @@ public class SharedFile implements Observable<FileMetadata> {
     private boolean isLocal;
 
     private List<Observer<FileMetadata>> observers = new CopyOnWriteArrayList<>(); // prevents "ConcurrentModificationException" http://stackoverflow.com/questions/19197579/java-observer-pattern-how-to-remove-observers-during-updatenotify-loop-itera
+    private boolean downloadActive;
 
     public SharedFile() {
         // empty constructor is required for GSON
@@ -76,10 +77,13 @@ public class SharedFile implements Observable<FileMetadata> {
     }
 
     synchronized public void addReplicaNode(UUID nodeId, List<String> chunkChecksums) {
-        if (chunkChecksums == null || chunkChecksums.size() < 1) {
+        if (nodeId == null || chunkChecksums == null || chunkChecksums.size() < 1) {
             return;
         }
         List<String> currentChecksums = replicaNodes.putIfAbsent(nodeId, chunkChecksums);
+
+        // remove null references and empty checksums
+        chunkChecksums.removeIf(s ->  s == null || s.isEmpty());
 
         // add only new chunk checksums
         if (currentChecksums != null) {
@@ -109,7 +113,7 @@ public class SharedFile implements Observable<FileMetadata> {
 
     synchronized public Chunk getChunk(String chunkChecksum) {
         return metadata.getChunks().stream()
-            .filter(c -> c.getChecksum().equals(chunkChecksum))
+            .filter(c -> c.getChecksum() != null && c.getChecksum().equals(chunkChecksum))
             .findFirst().orElse(null);
     }
 
@@ -117,8 +121,34 @@ public class SharedFile implements Observable<FileMetadata> {
         return metadata.getFileSize();
     }
 
+    synchronized public boolean activateDownload() {
+        boolean success;
+        if (downloadActive) {
+            success = false;
+        } else {
+            downloadActive = true;
+            success = true;
+        }
+        return success;
+    }
+
+    synchronized public boolean deactivateDownload() {
+        boolean success;
+        if (downloadActive) {
+            downloadActive = false;
+            success = true;
+        } else {
+            success = false;
+        }
+        return success;
+    }
+
     synchronized public boolean isDownloadActive() {
-        return metadata.getChunks().stream().anyMatch(Chunk::isDownloadActive);
+        return downloadActive;
+    }
+
+    synchronized public void removeReplicaNode(UUID nodeId) {
+        replicaNodes.remove(nodeId);
     }
 
     @Override

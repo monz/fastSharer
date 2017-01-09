@@ -25,6 +25,8 @@ public class NetworkService {
     public static final Charset PROTOCOL_CHARSET = Charset.forName("UTF-8");
 
     private static final Logger log = Logger.getLogger(NetworkService.class.getName());
+    private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
+
     private static final int SOCKET_TIMEOUT = (int) TimeUnit.MILLISECONDS.convert(5, TimeUnit.SECONDS);
     private static final UUID LOCAL_NODE_ID = UUID.randomUUID();
 
@@ -155,21 +157,7 @@ public class NetworkService {
         log.info("Removed node '" + node.getId() + "'");
 
         // clear node from shared files
-        SharedFileService sharedFileService = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
-        sharedFileService.removeNodeFromReplicaNodes(node.getId());
-
-        // todo: implement new services
-        /*
-        // remove all nodes from scheduleDownloadRequest queue
-        List<DownloadRequestJob> badTasks = downloadQueue.stream()
-                .filter(dlTask -> node.getNodeId().equals(dlTask.getNodeId()))
-                .collect(Collectors.toList());
-        log.info("Remove invalid node's tasks from scheduleDownloadRequest queue: " + badTasks);
-        // reset chunks attributes
-        badTasks.forEach(task -> task.getChunk().deactivateDownload());
-        downloadQueue.removeAll(badTasks);
-
-        */
+        SHARED_FILE_SERVICE.removeNodeFromReplicaNodes(node.getId());
 
         nodes.remove(node.getId());
 
