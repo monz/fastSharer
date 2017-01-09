@@ -1,18 +1,23 @@
 package data;
 
 import com.google.gson.annotations.Expose;
+import local.ServiceLocator;
 import local.decl.Observable;
 import local.decl.Observer;
 import local.impl.ObserverCmd;
+import net.NetworkService;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class SharedFile implements Observable<FileMetadata> {
+    private static final NetworkService NETWORK_SERVICE = (NetworkService) ServiceLocator.getInstance().getService(ServiceLocator.NETWORK_SERVICE);
+
     @Expose private FileMetadata metadata;
     @Expose private Map<UUID, List<String>> replicaNodes = new HashMap<>(); // map<nodeId, list<chunkMD5>>
 
@@ -77,7 +82,12 @@ public class SharedFile implements Observable<FileMetadata> {
     }
 
     synchronized public void addReplicaNode(UUID nodeId, List<String> chunkChecksums) {
-        if (nodeId == null || chunkChecksums == null || chunkChecksums.size() < 1) {
+        // ignore invalid data
+        // ignore unknown nodes
+        if (nodeId == null
+            || chunkChecksums == null
+            || chunkChecksums.size() < 1
+            || (NETWORK_SERVICE.getNode(nodeId) == null && ! NETWORK_SERVICE.getLocalNodeId().equals(nodeId))) {
             return;
         }
         List<String> currentChecksums = replicaNodes.putIfAbsent(nodeId, chunkChecksums);
@@ -149,6 +159,20 @@ public class SharedFile implements Observable<FileMetadata> {
 
     synchronized public void removeReplicaNode(UUID nodeId) {
         replicaNodes.remove(nodeId);
+    }
+
+    public UUID getNextDownloadNodeId() {
+        // get nodes which share the chunks remaining for download
+        // sorted by available chunk count, ascending
+        // get random node within the 5 lowest number of available chunks
+        return getChunksToDownload().stream()
+            .flatMap(c -> getReplicaNodesByChunk(c.getChecksum()).stream())
+            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+            .entrySet().stream()
+            .sorted(Map.Entry.comparingByValue())
+            .limit(5) // todo: create constant
+            .map(Map.Entry::getKey)
+            .findAny().orElse(null);
     }
 
     @Override

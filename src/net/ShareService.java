@@ -20,13 +20,10 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.*;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 public class ShareService implements AddFileListener {
     private static final Logger log = Logger.getLogger(ShareService.class.getName());
@@ -145,7 +142,7 @@ public class ShareService implements AddFileListener {
             ShareCommand<DownloadRequest> msg = new ShareCommand<>(ShareCommand.ShareCommandType.DOWNLOAD_REQUEST);
             msg.addData(new DownloadRequest(c.getFileId(), NETWORK_SERVICE.getLocalNodeId().toString(), c.getChecksum()));
 
-            UUID nodeId = getNextDownloadNodeId(sharedFile);
+            UUID nodeId = sharedFile.getNextDownloadNodeId();
             Node node = NETWORK_SERVICE.getNode(nodeId);
             if (node == null) {
                 log.warning(String.format("Could not find node for nodeId '%s'", nodeId));
@@ -197,14 +194,12 @@ public class ShareService implements AddFileListener {
 
                 if (checksum.equals(rr.getChunkChecksum())) {
                     // finish download success
-                    log.info(String.format("Download of chunk %s from file %s was successful", rr.getChunkChecksum(), rr.getFileId()));
                     downloadSuccess(chunk);
                     // todo: notify listener, to show download progress
                     // todo: deactivate download state on shared file
                 } else {
                     // finish download failure
                     // checksum does not match
-                    log.warning(String.format("Download of chunk %s from file %s was corrupt", rr.getChunkChecksum(), rr.getFileId()));
                     downloadFail(sharedFile, chunk);
                 }
             } catch (IOException e) {
@@ -370,17 +365,5 @@ public class ShareService implements AddFileListener {
             log.log(Level.SEVERE, "Could not open socket for receiving data.", e);
             return null;
         }
-    }
-
-    // todo: move to shared file
-    private UUID getNextDownloadNodeId(SharedFile sf) {
-        // get nodes which share the chunks remaining for download
-        return sf.getChunksToDownload().stream()
-            .flatMap(c -> sf.getReplicaNodesByChunk(c.getChecksum()).stream())
-            .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-            .entrySet().stream()
-            .sorted(Map.Entry.comparingByValue())
-            .map(Map.Entry::getKey)
-            .findFirst().orElse(null);
     }
 }
