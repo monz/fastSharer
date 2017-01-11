@@ -6,10 +6,7 @@ import local.ChecksumService;
 import local.ServiceLocator;
 import local.SharedFileService;
 import local.decl.AddFileListener;
-import net.data.DownloadRequest;
-import net.data.DownloadRequestResult;
-import net.data.Node;
-import net.data.ShareCommand;
+import net.data.*;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -22,8 +19,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.IntStream;
 
 public class ShareService implements AddFileListener {
     private static final Logger log = Logger.getLogger(ShareService.class.getName());
@@ -34,6 +33,7 @@ public class ShareService implements AddFileListener {
     private static final int SOCKET_TIMEOUT = (int) TimeUnit.MILLISECONDS.convert(10, TimeUnit.SECONDS); // todo: load from config
     private static final int BUFFER_SIZE = 4096;
     private static final int DENY_DOWNLOAD = -1;
+    private static final String LOCAL_NODE_ID = NETWORK_SERVICE.getLocalNodeId().toString();
 
     private ExecutorService requester;
     private ExecutorService downloader;
@@ -44,6 +44,7 @@ public class ShareService implements AddFileListener {
     private int maxConcurrentDownloads;
     private int maxConcurrentUploads;
     private String checksumAlgorithm;
+    private AtomicInteger downloadNodeRound;
 
     public ShareService(int maxConcurrentDownloads, int maxConcurrentUploads, String checksumAlgorithm) {
         this.requester = Executors.newSingleThreadExecutor();
@@ -55,6 +56,7 @@ public class ShareService implements AddFileListener {
         this.maxConcurrentDownloads = maxConcurrentDownloads;
         this.maxConcurrentUploads = maxConcurrentUploads;
         this.checksumAlgorithm = checksumAlgorithm;
+        this.downloadNodeRound = new AtomicInteger();
     }
 
     @Override
@@ -64,14 +66,16 @@ public class ShareService implements AddFileListener {
 
     @Override
     synchronized public void addedRemoteFile(SharedFile sharedFile) {
-        if (sharedFile != null && sharedFile.activateDownload() && (! sharedFile.isLocal())) {
+        // first time this remote file info gets read, activate shared file download
+        // and check if file is already downloaded, and whether the file checksum
+        // matches the transmitted file checksum
+        if (sharedFile.activateDownload() && (! sharedFile.isLocal())) {
             // check if file already downloaded
             if (Files.exists(Paths.get(sharedFile.getFilePath()))) {
                 if (sharedFile.getChecksum() != null) {
                     if (CHECKSUM_SERVICE.compareChecksum(sharedFile, sharedFile.getChecksum())) {
                         // file is already downloaded
                         // cancel file download requests
-                        sharedFile.setLocal(true);
                         return;
                     } else {
                         // delete corrupt file
@@ -89,7 +93,11 @@ public class ShareService implements AddFileListener {
                     return;
                 }
             }
+        } else if (sharedFile.isDownloadActive()) {
+            // check whether download was already scheduled
+            return;
         }
+
         // check if enough disk space left
         boolean enoughSpaceLeft;
         try {
@@ -101,18 +109,9 @@ public class ShareService implements AddFileListener {
         }
 
         if (enoughSpaceLeft) {
-            // add chunk to download queue which are not already downloaded or currently downloading
-            sharedFile.getMetadata().getChunks().stream()
-                .filter(c -> !c.isLocal() && !c.isDownloadActive() && !(c.getChecksum() == null))
-                .forEach(c -> {
-                    // mark chunk as currently downloading
-                    if (!c.activateDownload()) {
-                        log.info(String.format("Download request of chunk %s canceled, already downloading", c.getChecksum()));
-                        return;
-                    }
-
-                    requester.execute(requestDownloads(sharedFile, c));
-                });
+            // add download job for each chunk
+            IntStream.range(0, Chunk.getChunkCount(sharedFile.getFileSize()))
+                .forEach(c -> requester.execute(requestDownloads(sharedFile)));
         } else {
             // do not add to download queue
             log.warning("Not enough disk space left to download file");
@@ -127,7 +126,7 @@ public class ShareService implements AddFileListener {
         uploader.execute(upload(downloadRequest));
     }
 
-    private Runnable requestDownloads(SharedFile sharedFile, Chunk c) {
+    private Runnable requestDownloads(SharedFile sharedFile) {
         return () -> {
             log.info(String.format("Remaining chunks to download: %d", sharedFile.getChunksToDownload().size()));
 
@@ -139,20 +138,42 @@ public class ShareService implements AddFileListener {
                 return;
             }
 
-            ShareCommand<DownloadRequest> msg = new ShareCommand<>(ShareCommand.ShareCommandType.DOWNLOAD_REQUEST);
-            msg.addData(new DownloadRequest(c.getFileId(), NETWORK_SERVICE.getLocalNodeId().toString(), c.getChecksum()));
+            int round = downloadNodeRound.get() < maxConcurrentDownloads ? downloadNodeRound.getAndIncrement() : downloadNodeRound.getAndSet(0);
+            Pair<UUID, Chunk> downloadInfo = sharedFile.getNextChunkToDownload(round);
 
-            UUID nodeId = sharedFile.getNextDownloadNodeId();
-            Node node = NETWORK_SERVICE.getNode(nodeId);
+            if (downloadInfo == null) {
+                log.info("Choose next chunk to download failed");
+                downloadFail(sharedFile, null);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+
+            // mark chunk as currently downloading
+            Chunk chunk = downloadInfo.getValue();
+            if (!chunk.activateDownload()) {
+                log.info(String.format("Download request of chunk %s canceled, already downloading", chunk.getChecksum()));
+                downloadFail(sharedFile, chunk);
+                return;
+            }
+
+            // send download request
+            ShareCommand<DownloadRequest> msg = new ShareCommand<>(ShareCommand.ShareCommandType.DOWNLOAD_REQUEST);
+            msg.addData(new DownloadRequest(chunk.getFileId(), LOCAL_NODE_ID, chunk.getChecksum()));
+
+            Node node = NETWORK_SERVICE.getNode(downloadInfo.getKey());
             if (node == null) {
-                log.warning(String.format("Could not find node for nodeId '%s'", nodeId));
+                log.warning(String.format("Could not find node for nodeId '%s'", downloadInfo.getKey()));
                 // re-schedule download of chunk
-                downloadFail(sharedFile, c);
+                downloadFail(sharedFile, chunk);
                 return;
             }
             NETWORK_SERVICE.sendCommand(msg, node);
 
-            log.info(String.format("Requested Chunk '%s', from file '%s'", c.getChecksum(), sharedFile.getFilename()));
+            log.info(String.format("Requested Chunk '%s', from file '%s'", chunk.getChecksum(), sharedFile.getFilename()));
         };
     }
 
@@ -194,7 +215,7 @@ public class ShareService implements AddFileListener {
 
                 if (checksum.equals(rr.getChunkChecksum())) {
                     // finish download success
-                    downloadSuccess(chunk);
+                    downloadSuccess(sharedFile, chunk);
                     // todo: notify listener, to show download progress
                     // todo: deactivate download state on shared file
                 } else {
@@ -209,18 +230,27 @@ public class ShareService implements AddFileListener {
         };
     }
 
-    private void downloadSuccess(Chunk chunk) {
+    private void downloadSuccess(SharedFile sharedFile, Chunk chunk) {
         log.info(String.format("Download of chunk %s of file %s was successful", chunk.getChecksum(), chunk.getFileId()));
         chunk.setLocal(true);
         chunk.deactivateDownload();
+        // check whether file was completely downloaded
+        if (sharedFile.isLocal()) {
+            // finish file download
+            sharedFile.deactivateDownload();
+        }
         downloadToken.release();
     }
 
     private void downloadFail(SharedFile sharedFile, Chunk chunk) {
-        log.warning(String.format("Download of chunk %s of file %s failed", chunk.getChecksum(), chunk.getFileId()));
-        chunk.deactivateDownload();
-        // reschedule download of chunk
-        requester.execute(requestDownloads(sharedFile, chunk));
+        if (chunk != null) {
+            log.warning(String.format("Download of chunk %s of file %s failed", chunk.getChecksum(), chunk.getFileId()));
+            chunk.deactivateDownload();
+        }
+        // reschedule download of chunk if file is not complete yet
+        if (! sharedFile.isLocal()) {
+            requester.execute(requestDownloads(sharedFile));
+        }
         downloadToken.release();
     }
 
@@ -283,7 +313,7 @@ public class ShareService implements AddFileListener {
 
                 // send upload decision
                 msg.addData(new DownloadRequestResult(
-                    r.getFileId(), NETWORK_SERVICE.getLocalNodeId().toString(), r.getChunkChecksum(), s.getLocalPort()));
+                    r.getFileId(), LOCAL_NODE_ID, r.getChunkChecksum(), s.getLocalPort()));
                 NETWORK_SERVICE.sendCommand(msg, NETWORK_SERVICE.getNode(UUID.fromString(r.getNodeId())));
 
                 // handle upload (blocking)
@@ -316,7 +346,7 @@ public class ShareService implements AddFileListener {
 
                 // send upload decision
                 msg.addData(new DownloadRequestResult(
-                    r.getFileId(), NETWORK_SERVICE.getLocalNodeId().toString(), r.getChunkChecksum(), DENY_DOWNLOAD));
+                    r.getFileId(), LOCAL_NODE_ID, r.getChunkChecksum(), DENY_DOWNLOAD));
                 NETWORK_SERVICE.sendCommand(msg, NETWORK_SERVICE.getNode(UUID.fromString(r.getNodeId())));
             }
         };

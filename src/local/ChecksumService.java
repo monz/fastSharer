@@ -71,7 +71,11 @@ public class ChecksumService {
     private String calculateChecksum(SharedFile sharedFile) {
         List<String> checksums = new ArrayList<>();
         sharedFile.getMetadata().getChunks().forEach(c -> {
-                checksums.add(calculateChecksum(c));
+            String checksum = calculateChecksum(c);
+            if (checksum != null) {
+                checksums.add(checksum);
+                c.setLocal(true);
+            }
         });
 
         // prepare message digest

@@ -6,11 +6,9 @@ import local.decl.Observable;
 import local.decl.Observer;
 import local.impl.ObserverCmd;
 import net.NetworkService;
+import net.data.Pair;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -20,8 +18,6 @@ public class SharedFile implements Observable<FileMetadata> {
 
     @Expose private FileMetadata metadata;
     @Expose private Map<UUID, List<String>> replicaNodes = new HashMap<>(); // map<nodeId, list<chunkMD5>>
-
-    private boolean isLocal;
 
     private List<Observer<FileMetadata>> observers = new CopyOnWriteArrayList<>(); // prevents "ConcurrentModificationException" http://stackoverflow.com/questions/19197579/java-observer-pattern-how-to-remove-observers-during-updatenotify-loop-itera
     private boolean downloadActive;
@@ -37,12 +33,7 @@ public class SharedFile implements Observable<FileMetadata> {
      * @param metadata
      */
     public SharedFile(FileMetadata metadata) {
-        this(metadata, true);
-    }
-
-    public SharedFile(FileMetadata metadata, boolean isLocal) {
         this.metadata = metadata;
-        this.isLocal = isLocal;
     }
 
     synchronized public String getFilePath() {
@@ -66,11 +57,7 @@ public class SharedFile implements Observable<FileMetadata> {
     }
 
     synchronized public boolean isLocal() {
-        return isLocal;
-    }
-
-    synchronized public void setLocal(boolean local) {
-        isLocal = local;
+        return metadata.getChunks().stream().allMatch(Chunk::isLocal);
     }
 
     public String getFileId() {
@@ -105,12 +92,12 @@ public class SharedFile implements Observable<FileMetadata> {
     }
 
     synchronized public List<Chunk> getChunksToDownload() {
-        if (metadata.getChunks() == null || isLocal) {
+        if (metadata.getChunks() == null || isLocal()) {
             return null;
         }
 
         return metadata.getChunks().stream()
-            .filter(c -> ! c.isLocal())
+            .filter(c -> ! c.isLocal() && ! c.isDownloadActive() && c.getChecksum() != null)
             .collect(Collectors.toList());
     }
 
@@ -119,6 +106,10 @@ public class SharedFile implements Observable<FileMetadata> {
             .filter(e -> e.getValue().contains(chunkChecksum))
             .map(Map.Entry::getKey)
             .collect(Collectors.toList());
+    }
+
+    synchronized public List<String> getChunksOfReplicaNode(UUID nodeId) {
+        return replicaNodes.get(nodeId);
     }
 
     synchronized public Chunk getChunk(String chunkChecksum) {
@@ -161,7 +152,7 @@ public class SharedFile implements Observable<FileMetadata> {
         replicaNodes.remove(nodeId);
     }
 
-    public UUID getNextDownloadNodeId() {
+    synchronized private List<UUID> getNextDownloadNodes() {
         // get nodes which share the chunks remaining for download
         // sorted by available chunk count, ascending
         // get random node within the 5 lowest number of available chunks
@@ -170,9 +161,34 @@ public class SharedFile implements Observable<FileMetadata> {
             .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
             .entrySet().stream()
             .sorted(Map.Entry.comparingByValue())
-            .limit(5) // todo: create constant
             .map(Map.Entry::getKey)
-            .findAny().orElse(null);
+            .collect(Collectors.toList());
+    }
+
+    synchronized public Pair<UUID, Chunk> getNextChunkToDownload(int round) {
+        List<UUID> nodeIds = getNextDownloadNodes();
+        if (nodeIds.size() == 0) {
+            return null;
+        }
+        // chose node, round robin
+        UUID nodeId;
+        nodeId = nodeIds.get(round % nodeIds.size());
+
+        // convert chunksToDownload to checksum list
+        List<String> chunksToDownload = getChunksToDownload().stream()
+            .map(Chunk::getChecksum)
+            .collect(Collectors.toList());
+
+        // randomly chose a chunk from this node which gets downloaded next
+        // this chunk must be out of the list of chunks to download
+        List<String> allNodeChunks = getChunksOfReplicaNode(nodeId);
+        allNodeChunks.retainAll(chunksToDownload);
+        Chunk chunk = null;
+        if (allNodeChunks.size() > 0) {
+            chunk = getChunk(allNodeChunks.get(new Random().nextInt(allNodeChunks.size())));
+        }
+
+        return new Pair<>(nodeId, chunk);
     }
 
     @Override

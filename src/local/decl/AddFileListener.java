@@ -1,8 +1,9 @@
 package local.decl;
 
+import com.sun.istack.internal.NotNull;
 import data.SharedFile;
 
 public interface AddFileListener {
-    public void addedLocalFile(SharedFile sharedFile);
-    public void addedRemoteFile(SharedFile sharedFile);
+    @NotNull public void addedLocalFile(SharedFile sharedFile);
+    @NotNull public void addedRemoteFile(SharedFile sharedFile);
 }
