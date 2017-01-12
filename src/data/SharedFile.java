@@ -57,7 +57,14 @@ public class SharedFile implements Observable<FileMetadata> {
     }
 
     synchronized public boolean isLocal() {
-        return metadata.getChunks().stream().allMatch(Chunk::isLocal);
+        boolean isLocal;
+        if (metadata.getChunks().size() > 0) {
+            isLocal = metadata.getChunks().stream().allMatch(Chunk::isLocal);
+        } else {
+            isLocal = false;
+        }
+
+        return isLocal;
     }
 
     public String getFileId() {
@@ -93,7 +100,7 @@ public class SharedFile implements Observable<FileMetadata> {
 
     synchronized public List<Chunk> getChunksToDownload() {
         if (metadata.getChunks() == null || isLocal()) {
-            return null;
+            return Collections.emptyList();
         }
 
         return metadata.getChunks().stream()

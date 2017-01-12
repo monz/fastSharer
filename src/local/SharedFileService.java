@@ -11,6 +11,7 @@ import java.io.File;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class SharedFileService {
     private static final Logger log = Logger.getLogger(SharedFileService.class.getName());
@@ -54,12 +55,14 @@ public class SharedFileService {
     synchronized public void addRemoteFile(SharedFile remoteSharedFile) {
         // check whether the object is valid
         if (remoteSharedFile == null || remoteSharedFile.getMetadata() == null) {
+            log.info(String.format("Received remote file '%s' was not valid", remoteSharedFile.getFilename()));
             return;
         }
 
         // check whether the file is local (already downloaded)
         SharedFile localSharedFile = sharedFiles.get(remoteSharedFile.getFileId());
         if (localSharedFile != null && localSharedFile.isLocal()) {
+            log.info(String.format("Received remote file '%s' was already downloaded", remoteSharedFile.getFilename()));
             return;
         }
 
@@ -89,7 +92,9 @@ public class SharedFileService {
         });
 
         // add fileId to not downloaded chunks
+        // clean up chunks without checksum
         if (updatedSharedFile != null) {
+            updatedSharedFile.getMetadata().getChunks().retainAll(updatedSharedFile.getMetadata().getChunks().stream().filter(Chunk::hasChecksum).collect(Collectors.toList()));
             updatedSharedFile.getChunksToDownload().forEach(c -> c.setFileId(remoteSharedFile.getFileId()));
         }
 

@@ -15,6 +15,7 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
@@ -34,6 +35,7 @@ public class ShareService implements AddFileListener {
     private static final int BUFFER_SIZE = 4096;
     private static final int DENY_DOWNLOAD = -1;
     private static final String LOCAL_NODE_ID = NETWORK_SERVICE.getLocalNodeId().toString();
+    private static final String DOWNLOAD_EXTENSION = ".part";
 
     private ExecutorService requester;
     private ExecutorService downloader;
@@ -230,19 +232,28 @@ public class ShareService implements AddFileListener {
         };
     }
 
-    private void downloadSuccess(SharedFile sharedFile, Chunk chunk) {
+    synchronized private void downloadSuccess(SharedFile sharedFile, Chunk chunk) {
         log.info(String.format("Download of chunk %s of file %s was successful", chunk.getChecksum(), chunk.getFileId()));
         chunk.setLocal(true);
         chunk.deactivateDownload();
         // check whether file was completely downloaded
         if (sharedFile.isLocal()) {
             // finish file download
+            // rename file
+            try {
+                log.info(String.format("Rename file '%s' to finish download", sharedFile.getFilename()));
+                Files.move(Paths.get(sharedFile.getFilePath()+ DOWNLOAD_EXTENSION), Paths.get(sharedFile.getFilePath()), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                log.log(Level.WARNING, String.format("Could not rename file '%s' to finish download", sharedFile.getFilename()), e);
+            }
             sharedFile.deactivateDownload();
+        } else {
+            log.info(String.format("File '%s' is not finished yet, chunks to download %s", sharedFile.getFilename(), sharedFile.getChunksToDownload().size()));
         }
         downloadToken.release();
     }
 
-    private void downloadFail(SharedFile sharedFile, Chunk chunk) {
+    synchronized private void downloadFail(SharedFile sharedFile, Chunk chunk) {
         if (chunk != null) {
             log.warning(String.format("Download of chunk %s of file %s failed", chunk.getChecksum(), chunk.getFileId()));
             chunk.deactivateDownload();
@@ -258,7 +269,7 @@ public class ShareService implements AddFileListener {
         SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(fileId);
         Chunk chunk = sharedFile.getChunk(chunkChecksum);
 
-        RandomAccessFile outputFile = new RandomAccessFile(sharedFile.getFilePath(), "rw");
+        RandomAccessFile outputFile = new RandomAccessFile(sharedFile.getFilePath() + DOWNLOAD_EXTENSION, "rw");
 
         if (chunk.getOffset() > 0) {
             outputFile.seek(chunk.getOffset());
