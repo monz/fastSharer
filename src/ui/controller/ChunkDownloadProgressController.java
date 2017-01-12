@@ -14,10 +14,10 @@ import java.util.logging.Logger;
  * Shows the current progress on a shared file's chunk calculation
  * therefore observes the state of the shared file's chunks.
  */
-public class ChunkProgressController implements Observer<FileMetadata> {
-    private static final Logger log = Logger.getLogger(ChunkProgressController.class.getName());
+public class ChunkDownloadProgressController implements Observer<FileMetadata> {
+    private static final Logger log = Logger.getLogger(ChunkDownloadProgressController.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
-    private static final String TITLE = "Calculate Chunks";
+    private static final String TITLE = "Download File";
 
     private ProgressDialog progressDialog;
 
@@ -30,19 +30,17 @@ public class ChunkProgressController implements Observer<FileMetadata> {
         }
 
         // update progress on GUI
-        int chunksChecksumCount = (int)data.getChunks().stream().filter(c -> c.hasChecksum()).count();
-        progressDialog.update(chunksChecksumCount);
+        int chunksDownloadedCount = (int)data.getChunks().stream().filter(c -> c.isLocal()).count();
+        progressDialog.update(chunksDownloadedCount);
 
         // if was last chunk, close dialog
-        if (data.getChunks().size() == chunksChecksumCount) {
+        SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(data.getFileId());
+        if (sharedFile.isLocal()) {
             // close dialog
             progressDialog.setVisible(false);
             progressDialog.dispose();
 
-            log.info(String.format("Finished chunk calculation for file '%s'", data.getFileName()));
-
-            // remove this observer from observer list
-            SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(data.getFileId());
+            // remove this listener from listener list
             sharedFile.removeObserver(this);
         }
     }

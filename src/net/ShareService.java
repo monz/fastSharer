@@ -6,7 +6,9 @@ import local.ChecksumService;
 import local.ServiceLocator;
 import local.SharedFileService;
 import local.decl.AddFileListener;
+import local.impl.ObserverCmd;
 import net.data.*;
+import ui.controller.ChunkDownloadProgressController;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -105,6 +107,9 @@ public class ShareService implements AddFileListener {
         try {
             long availableDiskSpace = Files.getFileStore(Paths.get(SHARED_FILE_SERVICE.getDownloadDirectory())).getUsableSpace();
             enoughSpaceLeft = (availableDiskSpace - sharedFile.getFileSize()) > 0;
+
+            // add download observer, only once
+            sharedFile.addObserver(new ChunkDownloadProgressController());
         } catch (IOException e) {
             log.log(Level.WARNING, "Could not determine remaining disk space", e);
             return;
@@ -218,8 +223,6 @@ public class ShareService implements AddFileListener {
                 if (checksum.equals(rr.getChunkChecksum())) {
                     // finish download success
                     downloadSuccess(sharedFile, chunk);
-                    // todo: notify listener, to show download progress
-                    // todo: deactivate download state on shared file
                 } else {
                     // finish download failure
                     // checksum does not match
@@ -251,6 +254,9 @@ public class ShareService implements AddFileListener {
             log.info(String.format("File '%s' is not finished yet, chunks to download %s", sharedFile.getFilename(), sharedFile.getChunksToDownload().size()));
         }
         downloadToken.release();
+
+        // notify observer, to show download progress
+        sharedFile.notifyObservers(sharedFile.getMetadata(), ObserverCmd.UPDATE);
     }
 
     synchronized private void downloadFail(SharedFile sharedFile, Chunk chunk) {

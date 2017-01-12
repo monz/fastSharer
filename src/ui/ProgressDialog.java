@@ -7,14 +7,16 @@ import java.util.logging.Logger;
 public class ProgressDialog extends JDialog {
     private static final Logger log = Logger.getLogger(ProgressDialog.class.getName());
 
+    private String title;
     private String filename;
     private int chunkCount;
 
     private JProgressBar progressBar;
 
-    public ProgressDialog(String filename, int chunkCount) {
+    public ProgressDialog(String title, String filename, int chunkCount) {
         log.info(String.format("Created progress dialog for file '%s'", filename));
 
+        this.title = title;
         this.filename = filename;
         this.chunkCount = chunkCount;
 
@@ -22,7 +24,7 @@ public class ProgressDialog extends JDialog {
     }
 
     private void initView() {
-        setTitle("Calculate Chunks");
+        setTitle(title);
 
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
