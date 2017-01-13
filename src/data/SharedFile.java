@@ -58,7 +58,9 @@ public class SharedFile implements Observable<FileMetadata> {
 
     synchronized public boolean isLocal() {
         boolean isLocal;
-        if (metadata.getChunks().size() > 0) {
+        int expectedChunkCount = Chunk.getChunkCount(metadata.getFileSize());
+        int actualChunkCount = metadata.getChunks().size();
+        if (actualChunkCount > 0 && actualChunkCount == expectedChunkCount) {
             isLocal = metadata.getChunks().stream().allMatch(Chunk::isLocal);
         } else {
             isLocal = false;

@@ -21,7 +21,10 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.UUID;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -89,6 +92,8 @@ public class ShareService implements AddFileListener {
                         } catch (IOException e) {
                             log.log(Level.WARNING, String.format("Could not delete corrupt file '%s'", sharedFile.getFilePath()), e);
                             return;
+                        } finally {
+                            sharedFile.deactivateDownload();
                         }
                     }
                 } else {
@@ -199,7 +204,6 @@ public class ShareService implements AddFileListener {
             }
 
             log.info(String.format("Active downloads: %d", maxConcurrentDownloads - downloadToken.availablePermits()));
-            log.info(String.format("Currently queued downloads: %d", ((ThreadPoolExecutor)downloader).getQueue().size()));
 
             Node node = NETWORK_SERVICE.getNode(UUID.fromString(rr.getNodeId()));
             // check connection on all ips
@@ -235,7 +239,8 @@ public class ShareService implements AddFileListener {
         };
     }
 
-    synchronized private void downloadSuccess(SharedFile sharedFile, Chunk chunk) {
+    // if this method is synchronized, deadlock
+    private void downloadSuccess(SharedFile sharedFile, Chunk chunk) {
         log.info(String.format("Download of chunk %s of file %s was successful", chunk.getChecksum(), chunk.getFileId()));
         chunk.setLocal(true);
         chunk.deactivateDownload();
@@ -260,13 +265,17 @@ public class ShareService implements AddFileListener {
     }
 
     synchronized private void downloadFail(SharedFile sharedFile, Chunk chunk) {
+        log.info("failed download");
         if (chunk != null) {
             log.warning(String.format("Download of chunk %s of file %s failed", chunk.getChecksum(), chunk.getFileId()));
             chunk.deactivateDownload();
         }
         // reschedule download of chunk if file is not complete yet
         if (! sharedFile.isLocal()) {
+            log.info("reschedule download");
             requester.execute(requestDownloads(sharedFile));
+        } else {
+            log.info("Do not reschedule chunk download");
         }
         downloadToken.release();
     }
@@ -315,7 +324,6 @@ public class ShareService implements AddFileListener {
     private Runnable upload(DownloadRequest r) {
         return () -> {
             log.info(String.format("Active uploads: %d", maxConcurrentUploads - uploadToken.availablePermits()));
-            log.info(String.format("Currently queued upload requests: %d", ((ThreadPoolExecutor)uploader).getQueue().size()));
 
             // take upload token, if not available, deny request
             boolean acceptUpload = uploadToken.tryAcquire();
@@ -354,9 +362,6 @@ public class ShareService implements AddFileListener {
                     // close network connection
                     try { s.close(); } catch (IOException e) { e.printStackTrace(); }
                 }
-
-                // release upload token
-                uploadToken.release();
             } else {
                 // deny
                 log.info("Deny scheduleDownloadRequest request: " + r.getFileId());
@@ -366,6 +371,9 @@ public class ShareService implements AddFileListener {
                     r.getFileId(), LOCAL_NODE_ID, r.getChunkChecksum(), DENY_DOWNLOAD));
                 NETWORK_SERVICE.sendCommand(msg, NETWORK_SERVICE.getNode(UUID.fromString(r.getNodeId())));
             }
+
+            // release upload token
+            uploadToken.release();
         };
     }
 
