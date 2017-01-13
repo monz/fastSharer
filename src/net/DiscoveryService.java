@@ -16,6 +16,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class DiscoveryService implements Service {
     public static final int HELLO_MSG_SIZE = 36;
@@ -163,20 +164,22 @@ public class DiscoveryService implements Service {
         }
     };
 
-    private Runnable cleanUpNodes = new Runnable() {
-        @Override
-        public void run() {
-            try {
-                NETWORK_SERVICE.getAllNodes().values().stream()
-                    .filter(n -> {
-                        boolean expired = (n.getLastTimeSeen() + CLEAN_TIMEOUT) < System.currentTimeMillis();
-                        log.info("Expired: " + expired + " Node: " + n.getId() + " last seen: " + n.getLastTimeSeen() + " timeout in: " + (n.getLastTimeSeen() + CLEAN_TIMEOUT - System.currentTimeMillis()));
-                        return expired;
-                    })
-                    .forEach(NETWORK_SERVICE::removeNode);
-            }catch (Exception e) {
-                log.log(Level.SEVERE, "Ooops!", e);
-            }
+    private Runnable cleanUpNodes = () -> {
+        try {
+            // first filter nodes, afterwards remove from nodesList
+            // do not iterate through node list while removing nodes, simultaneously
+            // get expired nodes
+            List<Node> expiredNodes = NETWORK_SERVICE.getAllNodes().values().stream()
+                .filter(n -> {
+                    boolean expired = (n.getLastTimeSeen() + CLEAN_TIMEOUT) < System.currentTimeMillis();
+                    log.info("Expired: " + expired + " Node: " + n.getId() + " last seen: " + n.getLastTimeSeen() + " timeout in: " + (n.getLastTimeSeen() + CLEAN_TIMEOUT - System.currentTimeMillis()));
+                    return expired;
+                }).collect(Collectors.toList());
+
+            // remove nodes
+            expiredNodes.forEach(NETWORK_SERVICE::removeNode);
+        }catch (Exception e) {
+            log.log(Level.SEVERE, "Ooops!", e);
         }
     };
 
