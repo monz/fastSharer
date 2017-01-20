@@ -111,6 +111,6 @@ public class Settings extends JPanel {
             return;
         }
 
-        downloadDir.setText(config.getProperty("download_destination"));
+        downloadDir.setText(config.getProperty("sharer_download_directory"));
     }
 }
