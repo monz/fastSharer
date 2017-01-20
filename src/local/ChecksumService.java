@@ -3,10 +3,12 @@ package local;
 import data.Chunk;
 import data.SharedFile;
 
-import java.io.BufferedInputStream;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -108,38 +110,32 @@ public class ChecksumService {
     private String calculateChecksum(Chunk c) {
         String filePath = SHARED_FILE_SERVICE.getFilePath(c.getFileId());
 
-        // open file
-        BufferedInputStream is;
+        // open file channel
+        FileChannel fc;
         try {
-            is = new BufferedInputStream(new FileInputStream(filePath));
+            fc = new RandomAccessFile(filePath, "r").getChannel();
         } catch (FileNotFoundException e) {
             log.log(Level.WARNING, String.format("File '%s' not found!", filePath), e);
             return null;
         }
 
+        // prepare message digest
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance(checksumAlgorithm);
+        } catch (NoSuchAlgorithmException e) {
+            log.log(Level.WARNING, "Hash algorithm not found!", e);
+            return null;
+        }
+
         // calculate chunk checksum
         String checksum;
-        byte[] b = new byte[(int)c.getSize()];
         try {
-            is.skip(c.getOffset());
-            int len = is.read(b);
 
-            if (len != c.getSize()) {
-                // error occurred read insufficient bytes
-                log.log(Level.SEVERE, "Could not read enough bytes from file!");
-                return null;
-            }
+            MappedByteBuffer mappedByteBuffer = fc.map(FileChannel.MapMode.READ_ONLY, c.getOffset(), c.getSize());
+            ByteBuffer buf = mappedByteBuffer.asReadOnlyBuffer();
+            md.update(buf);
 
-            // prepare message digest
-            MessageDigest md;
-            try {
-                md = MessageDigest.getInstance(checksumAlgorithm);
-            } catch (NoSuchAlgorithmException e) {
-                log.log(Level.WARNING, "Hash algorithm not found!", e);
-                return null;
-            }
-
-            md.update(b, 0, len);
             checksum = digestToString(md.digest());
 
         } catch (IOException e) {
@@ -147,7 +143,7 @@ public class ChecksumService {
             return null;
         } finally {
             try {
-                is.close();
+                fc.close();
             } catch (IOException e) {
                 log.log(Level.WARNING, "Could not close input Stream", e);
             }
