@@ -9,8 +9,7 @@ import java.awt.dnd.DropTarget;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.IOException;
 
 public class Overview extends JFrame {
     private static final OverviewController SHARER_CONTROLLER = OverviewController.getInstance();
@@ -156,8 +155,13 @@ public class Overview extends JFrame {
                 int returnVal = fc.showOpenDialog(Overview.this);
 
                 if (returnVal == JFileChooser.APPROVE_OPTION) {
-                    Path sharerFile = Paths.get(fc.getSelectedFile().getAbsolutePath());
-                    SHARER_CONTROLLER.openSharerFile(sharerFile);
+                    String sharerFile = fc.getSelectedFile().getAbsolutePath();
+                    try {
+                        SHARER_CONTROLLER.openSharerFile(sharerFile);
+                    } catch (IOException err) {
+                        err.printStackTrace();
+                        // todo: show error message on gui
+                    }
                 }
             }
         });

@@ -93,4 +93,11 @@ public class ServiceLocator {
 
         return service;
     }
+
+    public static void updateConfig(Properties config) {
+        // todo: implement
+        // stop/shutdown all services
+        // init services with new config
+        // restart all services
+    }
 }

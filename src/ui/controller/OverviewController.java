@@ -1,22 +1,27 @@
 package ui.controller;
 
 import data.SharedFile;
+import local.ServiceLocator;
+import local.SharedFileService;
 import local.decl.AddFileListener;
 import local.decl.NodeStateListener;
+import main.Sharer;
 import net.data.Node;
 import persistence.ConfigFileHandler;
+import persistence.SharedFileHandler;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import java.io.IOException;
-import java.nio.file.Path;
+import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class OverviewController implements AddFileListener, NodeStateListener {
     // todo: hold views for overview
+    private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
     private static final Logger log = Logger.getLogger(OverviewController.class.getName());
     private static final DefaultListModel<String> FILE_LIST_MODEL = new DefaultListModel<>();
@@ -61,38 +66,32 @@ public class OverviewController implements AddFileListener, NodeStateListener {
         return SHARER_ID_MODEL;
     }
 
-    public void openSharerFile(Path filepath) {
-//        Net net = Net.getInstance();
-//        ShareFile sharedFile = null;
-//        try {
-//            sharedFile = ShareFileHandler.loadSharedFile(net.getNodeId(), filepath);
-//        } catch (IOException e) {
-//            log.log(Level.WARNING, "Could not load sharer file: " + sharedFile.getFilename(), e);
-//        }
-//
-//        net.addFile(sharedFile);
-//        addFile(sharedFile.getFilename());
+    public void openSharerFile(String filePath) throws IOException {
+        SharedFile sharedFile = null;
+        try {
+            sharedFile = SharedFileHandler.loadSharedFile(filePath);
+        } catch (IOException e) {
+            log.log(Level.WARNING, "Could not load sharer file: " + sharedFile.getFilename(), e);
+        }
+
+        SHARED_FILE_SERVICE.addLocalFile(sharedFile.getMetadata());
     }
 
     public void loadSharerFiles() {
-//        Net net = Net.getInstance();
-//        List<ShareFile> sharedFiles = ShareFileHandler.loadSharedFiles(net.getNodeId(), Sharer.configDir);
-//        sharedFiles.forEach(sf -> {
-//            net.addFile(sf);
-//            addFile(sf.getFilename());
-//        });
+        List<SharedFile> sharedFiles = SharedFileHandler.loadSharedFiles(Sharer.configDir);
+        sharedFiles.forEach(sf -> {
+            SHARED_FILE_SERVICE.addLocalFile(sf.getMetadata());
+        });
     }
 
     public void saveSharerFiles() {
-//        Net net = Net.getInstance();
-//        ShareFileHandler.saveShareFiles(net.getLocalFiles().values(), Sharer.configDir);
+        SharedFileHandler.saveShareFiles(SHARED_FILE_SERVICE.getLocal(), Sharer.configDir);
     }
 
     public void saveSettings(Properties config) throws IOException {
-//        ConfigFileHandler.saveConfigFile(config);
-//        // update net settings
-//        Net net = Net.getInstance();
-//        net.setConfig(config);
+        ConfigFileHandler.saveConfigFile(config);
+        // update net settings
+        ServiceLocator.updateConfig(config);
     }
 
     public Properties loadSettings() throws IOException {

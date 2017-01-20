@@ -128,4 +128,8 @@ public class SharedFileService {
             sf.removeReplicaNode(nodeId);
         });
     }
+
+    synchronized public List<SharedFile> getLocal() {
+        return sharedFiles.values().stream().filter(SharedFile::isLocal).collect(Collectors.toList());
+    }
 }
