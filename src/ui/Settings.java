@@ -1,5 +1,6 @@
 package ui;
 
+import main.Sharer;
 import ui.controller.OverviewController;
 
 import javax.swing.*;
@@ -59,6 +60,13 @@ public class Settings extends JPanel {
             public void actionPerformed(ActionEvent e) {
                 try {
                     SHARE_CONTROLLER.saveSettings(getCurrentSettings());
+
+                    // show restart hint // todo: implement settings reload mechanism
+                    JOptionPane.showMessageDialog(
+                        null,
+                        "New settings will be active after Sharer restart."
+                    );
+
                 } catch (IOException err) {
                     log.log(Level.SEVERE, "Could not store config file to disk", err);
                 }
@@ -94,7 +102,7 @@ public class Settings extends JPanel {
         // update config file with settings in gui
         String downloadDirectory = downloadDir.getText();
         if(! downloadDirectory.isEmpty()) {
-            config.setProperty("download_destination", downloadDirectory);
+            config.setProperty(Sharer.DOWNLOAD_DIRECTORY, downloadDirectory);
         } else {
             log.warning("Could not save scheduleDownloadRequest directory settings: '" + downloadDirectory + "'");
         }
@@ -111,6 +119,6 @@ public class Settings extends JPanel {
             return;
         }
 
-        downloadDir.setText(config.getProperty("sharer_download_directory"));
+        downloadDir.setText(config.getProperty(Sharer.DOWNLOAD_DIRECTORY));
     }
 }
