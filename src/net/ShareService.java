@@ -191,7 +191,7 @@ public class ShareService implements AddFileListener {
                 downloadFail(sharedFile, chunk);
                 return;
             }
-            NETWORK_SERVICE.sendCommand(msg, node); // fixme: if send fails, download job does not get rescheduled
+            NETWORK_SERVICE.sendCommand(msg, node, () -> downloadFail(sharedFile, chunk));
 
             log.info(String.format("Requested Chunk '%s', from file '%s'", chunk.getChecksum(), sharedFile.getFilename()));
         };

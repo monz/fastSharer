@@ -6,6 +6,7 @@ import local.SharedFileService;
 import local.decl.NodeStateListener;
 import net.data.Node;
 import net.data.ShareCommand;
+import net.decl.FailCallback;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -61,11 +62,16 @@ public class NetworkService {
         sendCommand(cmd, n, null);
     }
 
-    synchronized private void sendCommand(ShareCommand cmd, Node n, TypeAdapter serializer) {
+    synchronized public void sendCommand(ShareCommand cmd, Node n, FailCallback failCallback) {
+        sendCommand(cmd, n, null, failCallback);
+    }
+
+    synchronized private void sendCommand(ShareCommand cmd, Node n, TypeAdapter serializer, FailCallback failCallback) {
         threadPool.execute(() -> {
             // check if remote node was already discovered
             if (n == null || nodes.get(n.getId()) == null) {
                 log.warning("Node '" + (n == null ? "null" : n.getId()) + "' not found.");
+                if (failCallback != null) failCallback.fail();
                 return;
             }
 
@@ -79,8 +85,10 @@ public class NetworkService {
 
             Socket s;
             BufferedWriter out;
+            boolean successfullySend = false;
             // establish tcp connection
             for (String ip : ips) {
+                successfullySend = true;
                 try {
                     s = new Socket();
                     s.connect(new InetSocketAddress(ip, cmdPort), SOCKET_TIMEOUT);
@@ -88,11 +96,13 @@ public class NetworkService {
                     log.log(Level.WARNING, "Could not send command: " + cmd.serialize(serializer) + " to: " + ip, e);
                     // remove unreachable nodes
                     removeNode(n);
+                    successfullySend = false;
                     continue;
                 } catch (IOException e) {
                     log.log(Level.SEVERE, "Could not create new connection with IP: " + ip + " and port: " + cmdPort, e);
                     // remove unreachable nodes
                     removeNode(n);
+                    successfullySend = false;
                     continue;
                 }
 
@@ -106,6 +116,7 @@ public class NetworkService {
                     log.log(Level.SEVERE, "Could not send command: " + cmd.serialize(serializer) + " to: " + s.getInetAddress().getHostAddress(), e);
                     // remove unreachable nodes
                     removeNode(n);
+                    successfullySend = false;
                     continue;
                 } finally {
                     try {
@@ -115,6 +126,9 @@ public class NetworkService {
                     } catch (IOException e) {
                     }
                 }
+            }
+            if (!successfullySend && failCallback != null) {
+                failCallback.fail();
             }
         });
     }
