@@ -21,7 +21,7 @@ public class FileMetadata {
         this(UUID.randomUUID().toString(), filePath);
     }
 
-    public FileMetadata(String fileId, String filePath) throws IOException {
+    private FileMetadata(String fileId, String filePath) throws IOException {
         this.fileId = fileId;
         this.filePath = filePath;
         this.fileName = Paths.get(filePath).getFileName().toString();

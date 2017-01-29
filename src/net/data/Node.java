@@ -19,8 +19,19 @@ public class Node {
         return id;
     }
 
-    public Set<String> getIps() {
+    synchronized public Set<String> getIps() {
         return ips;
+    }
+
+    synchronized public void addIps(Set<String> newNodeIps) {
+        if (newNodeIps == null || newNodeIps.isEmpty()) {
+            return;
+        }
+        // remove duplicates
+        newNodeIps.removeAll(newNodeIps);
+        if (newNodeIps.size() > 0) {
+            ips.addAll(newNodeIps);
+        }
     }
 
     synchronized public long getLastTimeSeen() {

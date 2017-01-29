@@ -49,7 +49,7 @@ public class OverviewController implements AddFileListener, NodeStateListener {
         return NODE_LIST_MODEL;
     }
 
-    synchronized public void updateSharerId(String id) {
+    public void updateSharerId(String id) {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -62,7 +62,7 @@ public class OverviewController implements AddFileListener, NodeStateListener {
         });
     }
 
-    synchronized public Document getIdModel() {
+    public Document getIdModel() {
         return SHARER_ID_MODEL;
     }
 

@@ -2,7 +2,6 @@ package data;
 
 import com.google.gson.annotations.Expose;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -82,11 +81,11 @@ public class Chunk {
         this.checksum = checksum;
     }
 
-    synchronized public long getOffset() {
+    public long getOffset() {
         return offset;
     }
 
-    synchronized public long getSize() {
+    public long getSize() {
         return size;
     }
 
@@ -102,7 +101,7 @@ public class Chunk {
         return (int) Math.ceil(fileSize / (double) CHUNK_SIZE);
     }
 
-    synchronized public static List<Chunk> getChunks(String fileId, long fileSize) throws IOException {
+    public static List<Chunk> getChunks(String fileId, long fileSize) {
         List<Chunk> chunks = new ArrayList<>(getChunkCount(fileSize));
 
         long remainingSize = fileSize;

@@ -37,11 +37,11 @@ public class SharedFile implements Observable<FileMetadata> {
         this.metadata = metadata;
     }
 
-    synchronized public String getFilePath() {
+    public String getFilePath() {
         return metadata.getFilePath();
     }
 
-    synchronized public void setFilePath(String filePath) {
+    public void setFilePath(String filePath) {
         metadata.setFilePath(filePath);
     }
 
@@ -57,7 +57,7 @@ public class SharedFile implements Observable<FileMetadata> {
         return metadata.getChecksum();
     }
 
-    synchronized public boolean isLocal() {
+    public boolean isLocal() {
         boolean isLocal;
         int expectedChunkCount = Chunk.getChunkCount(metadata.getFileSize());
         int actualChunkCount = metadata.getChunks().size();
@@ -101,7 +101,7 @@ public class SharedFile implements Observable<FileMetadata> {
         }
     }
 
-    synchronized public List<Chunk> getChunksToDownload() {
+    public List<Chunk> getChunksToDownload() {
         if (metadata.getChunks() == null || isLocal()) {
             return Collections.emptyList();
         }
@@ -122,7 +122,7 @@ public class SharedFile implements Observable<FileMetadata> {
         return replicaNodes.get(nodeId);
     }
 
-    synchronized public Chunk getChunk(String chunkChecksum) {
+    public Chunk getChunk(String chunkChecksum) {
         return metadata.getChunks().stream()
             .filter(c -> c.getChecksum() != null && c.getChecksum().equals(chunkChecksum))
             .findFirst().orElse(null);
@@ -162,7 +162,7 @@ public class SharedFile implements Observable<FileMetadata> {
         replicaNodes.remove(nodeId);
     }
 
-    synchronized private List<UUID> getNextDownloadNodes() {
+    private List<UUID> getNextDownloadNodes() {
         // get nodes which share the chunks remaining for download
         // sorted by available chunk count, ascending
         // get random node within the 5 lowest number of available chunks
@@ -175,7 +175,7 @@ public class SharedFile implements Observable<FileMetadata> {
             .collect(Collectors.toList());
     }
 
-    synchronized public Pair<UUID, Chunk> getNextChunkToDownload(int round) {
+    public Pair<UUID, Chunk> getNextChunkToDownload(int round) {
         List<UUID> nodeIds = getNextDownloadNodes();
         if (nodeIds.size() == 0) {
             return null;
@@ -205,7 +205,7 @@ public class SharedFile implements Observable<FileMetadata> {
         replicaNodes.clear();
     }
 
-    synchronized public List<String> getAllChunkChecksums() {
+    public List<String> getAllChunkChecksums() {
         return metadata.getChunks().stream().map(Chunk::getChecksum).collect(Collectors.toList());
     }
 

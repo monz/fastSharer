@@ -75,7 +75,7 @@ public class ShareService implements AddFileListener {
     }
 
     @Override
-    synchronized public void addedRemoteFile(SharedFile sharedFile) {
+    public void addedRemoteFile(SharedFile sharedFile) {
         // first time this remote file info gets read, activate shared file download
         // and check if file is already downloaded, and whether the file checksum
         // matches the transmitted file checksum
@@ -191,7 +191,7 @@ public class ShareService implements AddFileListener {
                 downloadFail(sharedFile, chunk);
                 return;
             }
-            NETWORK_SERVICE.sendCommand(msg, node);
+            NETWORK_SERVICE.sendCommand(msg, node); // fixme: if send fails, download job does not get rescheduled
 
             log.info(String.format("Requested Chunk '%s', from file '%s'", chunk.getChecksum(), sharedFile.getFilename()));
         };
@@ -272,7 +272,7 @@ public class ShareService implements AddFileListener {
         sharedFile.notifyObservers(sharedFile.getMetadata(), ObserverCmd.UPDATE);
     }
 
-    synchronized private void downloadFail(SharedFile sharedFile, Chunk chunk) {
+    private void downloadFail(SharedFile sharedFile, Chunk chunk) {
         log.info("failed download");
         if (chunk != null) {
             log.warning(String.format("Download of chunk %s of file %s failed", chunk.getChecksum(), chunk.getFileId()));

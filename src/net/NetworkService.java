@@ -133,7 +133,7 @@ public class NetworkService {
                 log.info("Node already contains all ip addresses received");
                 // gui update not required
             } else {
-                ips.addAll(newNode.getIps());
+                node.addIps(newNode.getIps());
                 // update gui
                 nodeStateListeners.forEach(l -> l.addNode(node));
             }
@@ -165,7 +165,7 @@ public class NetworkService {
         nodeStateListeners.forEach(l -> l.removeNode(node));
     }
 
-    synchronized public UUID getLocalNodeId() {
+    public UUID getLocalNodeId() {
         return LOCAL_NODE_ID;
     }
 
