@@ -20,6 +20,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -28,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class ShareService implements AddFileListener {
@@ -67,7 +70,7 @@ public class ShareService implements AddFileListener {
     }
 
     @Override
-    synchronized public void addedLocalFile(SharedFile sharedFile) {
+    public void addedLocalFile(SharedFile sharedFile) {
         // nothing to download
     }
 
@@ -123,23 +126,28 @@ public class ShareService implements AddFileListener {
         if (enoughSpaceLeft) {
             // add download job for each chunk
             IntStream.range(0, Chunk.getChunkCount(sharedFile.getFileSize()))
-                .forEach(c -> requester.execute(requestDownloads(sharedFile)));
+                .forEach(c -> requester.execute(requestDownloads()));
         } else {
             // do not add to download queue
             log.warning("Not enough disk space left to download file");
         }
     }
 
-    synchronized public void addDownload(DownloadRequestResult downloadRequestResult) {
+    public void addDownload(DownloadRequestResult downloadRequestResult) {
         downloader.execute(download(downloadRequestResult));
     }
 
-    synchronized public void addUpload(DownloadRequest downloadRequest) {
+    public void addUpload(DownloadRequest downloadRequest) {
         uploader.execute(upload(downloadRequest));
     }
 
-    private Runnable requestDownloads(SharedFile sharedFile) {
+    private Runnable requestDownloads() {
         return () -> {
+            List<SharedFile> sfs = SHARED_FILE_SERVICE.getAll().values().stream().
+                filter(sf -> !sf.isLocal())
+                .collect(Collectors.toList());
+
+            SharedFile sharedFile = sfs.get(new Random().nextInt(sfs.size()));
             log.info(String.format("Remaining chunks to download: %d", sharedFile.getChunksToDownload().size()));
 
             // take download token (blocking)
@@ -273,7 +281,7 @@ public class ShareService implements AddFileListener {
         // reschedule download of chunk if file is not complete yet
         if (! sharedFile.isLocal()) {
             log.info("reschedule download");
-            requester.execute(requestDownloads(sharedFile));
+            requester.execute(requestDownloads());
         } else {
             log.info("Do not reschedule chunk download");
         }

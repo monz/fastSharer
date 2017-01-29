@@ -21,7 +21,7 @@ public class ShareCommandReceiverService implements Service {
     }
 
     @Override
-    synchronized public void start() {
+    public void start() {
         try {
             receiver.start();
         } catch (IllegalThreadStateException e) {
