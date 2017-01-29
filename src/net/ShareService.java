@@ -389,7 +389,9 @@ public class ShareService implements AddFileListener {
         SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(fileId);
         Chunk chunk = sharedFile.getChunk(chunkChecksum);
 
-        BufferedInputStream bis = new BufferedInputStream(new FileInputStream(sharedFile.getFilePath()));
+        String filePath = Files.exists(Paths.get(sharedFile.getFilePath())) ? sharedFile.getFilePath() : sharedFile.getFilePath() + DOWNLOAD_EXTENSION;
+
+        BufferedInputStream bis = new BufferedInputStream(new FileInputStream(filePath));
         BufferedOutputStream bos = new BufferedOutputStream(client.getOutputStream());
 
         if (chunk.getOffset() > 0) {
