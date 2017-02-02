@@ -132,4 +132,8 @@ public class SharedFileService {
     synchronized public List<SharedFile> getLocal() {
         return sharedFiles.values().stream().filter(SharedFile::isLocal).collect(Collectors.toList());
     }
+
+    synchronized public List<SharedFile> getNotLocal() {
+        return sharedFiles.values().stream().filter(sf -> !sf.isLocal()).collect(Collectors.toList());
+    }
 }

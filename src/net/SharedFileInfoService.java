@@ -12,8 +12,12 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SharedFileInfoService implements Service {
+    private static final Logger log = Logger.getLogger(SharedFileInfoService.class.getName());
+
     private static final NetworkService NETWORK_SERVICE = (NetworkService) ServiceLocator.getInstance().getService(ServiceLocator.NETWORK_SERVICE);
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
@@ -31,21 +35,26 @@ public class SharedFileInfoService implements Service {
         sender.scheduleAtFixedRate(sendSharedFileInfo, 0, period, TimeUnit.MILLISECONDS);
     }
 
-    private Runnable sendSharedFileInfo = () ->
-        SHARED_FILE_SERVICE.getAll().values().forEach(sf -> {
-            ShareCommand<SharedFile> msg = new ShareCommand<>(ShareCommand.ShareCommandType.PUSH_SHARE_LIST);
+    private Runnable sendSharedFileInfo = () -> {
+        try {
+            SHARED_FILE_SERVICE.getAll().values().forEach(sf -> {
+                ShareCommand<SharedFile> msg = new ShareCommand<>(ShareCommand.ShareCommandType.PUSH_SHARE_LIST);
 
-            // add local node as replica node for all local chunks
-            List<String> chunkSums = new ArrayList<>();
-            sf.getMetadata().getChunks().stream()
-                .filter(Chunk::isLocal)
-                .forEach(c -> chunkSums.add(c.getChecksum()));
-            sf.addReplicaNode(NETWORK_SERVICE.getLocalNodeId(), chunkSums);
+                // add local node as replica node for all local chunks
+                List<String> chunkSums = new ArrayList<>();
+                sf.getMetadata().getChunks().stream()
+                    .filter(Chunk::isLocal)
+                    .forEach(c -> chunkSums.add(c.getChecksum()));
+                sf.addReplicaNode(NETWORK_SERVICE.getLocalNodeId(), chunkSums);
 
-            msg.addData(sf);
+                msg.addData(sf);
 
-            NETWORK_SERVICE.broadcast(msg);
-        });
+                NETWORK_SERVICE.broadcast(msg);
+            });
+        } catch (Exception e) {
+            log.log(Level.SEVERE, "Ooops!", e);
+        }
+    };
 
     @Override
     public void stop() {
