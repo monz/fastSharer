@@ -1,5 +1,6 @@
 package ui.controller;
 
+import data.Chunk;
 import data.FileMetadata;
 import data.SharedFile;
 import local.ServiceLocator;
@@ -25,7 +26,7 @@ public class ChunkDownloadProgressController implements Observer<FileMetadata> {
     synchronized public void update(FileMetadata data, ObserverCmd cmd) {
         // open dialog for shared file(one for each fileId), if not exist
         if (progressDialog == null) {
-            progressDialog = new ProgressDialog(TITLE, data.getFileName(), data.getChunks().size());
+            progressDialog = new ProgressDialog(TITLE, data.getFileName(), Chunk.getChunkCount(data.getFileSize()));
             progressDialog.setVisible(true);
         }
 
