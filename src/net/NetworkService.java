@@ -97,13 +97,13 @@ public class NetworkService {
                     // remove unreachable nodes
                     removeNode(n);
                     successfullySend = false;
-                    continue;
+                    break;
                 } catch (IOException e) {
                     log.log(Level.SEVERE, "Could not create new connection with IP: " + ip + " and port: " + cmdPort, e);
                     // remove unreachable nodes
                     removeNode(n);
                     successfullySend = false;
-                    continue;
+                    break;
                 }
 
                 // send share command
@@ -117,7 +117,7 @@ public class NetworkService {
                     // remove unreachable nodes
                     removeNode(n);
                     successfullySend = false;
-                    continue;
+                    break;
                 } finally {
                     try {
                         if (s != null) {
