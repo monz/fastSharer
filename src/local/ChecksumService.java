@@ -3,12 +3,10 @@ package local;
 import data.Chunk;
 import data.SharedFile;
 
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.nio.ByteBuffer;
-import java.nio.MappedByteBuffer;
-import java.nio.channels.FileChannel;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -23,6 +21,7 @@ public class ChecksumService {
     private static final Logger log = Logger.getLogger(ChecksumService.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
     private static final int MD5_LENGTH = 32;
+    private static final int BUFFER_SIZE = 32*1024; // 32 kBytes
 
     private ExecutorService executor;
     private String checksumAlgorithm;
@@ -110,10 +109,10 @@ public class ChecksumService {
     private String calculateChecksum(Chunk c) {
         String filePath = SHARED_FILE_SERVICE.getFilePath(c.getFileId());
 
-        // open file channel
-        FileChannel fc;
+        // open file
+        BufferedInputStream is;
         try {
-            fc = new RandomAccessFile(filePath, "r").getChannel();
+            is = new BufferedInputStream(new FileInputStream(filePath));
         } catch (FileNotFoundException e) {
             log.log(Level.WARNING, String.format("File '%s' not found!", filePath), e);
             return null;
@@ -130,11 +129,29 @@ public class ChecksumService {
 
         // calculate chunk checksum
         String checksum;
+        byte[] b = new byte[BUFFER_SIZE];
         try {
+            // move to beginning of chunk
+            long bytesSkipped = is.skip(c.getOffset());
+            if (bytesSkipped != c.getOffset()) {
+                log.warning("Could not skip enough bytes to comply with chunk offset!");
+                return null;
+            }
 
-            MappedByteBuffer mappedByteBuffer = fc.map(FileChannel.MapMode.READ_ONLY, c.getOffset(), c.getSize());
-            ByteBuffer buf = mappedByteBuffer.asReadOnlyBuffer();
-            md.update(buf);
+            // read bytes
+            long remainingBytes = c.getSize();
+            while (remainingBytes > 0) {
+                int expectedLen = (int) Math.min(BUFFER_SIZE, remainingBytes);
+                int len = is.read(b, 0, expectedLen);
+                if (len != expectedLen) {
+                    // error occurred read insufficient bytes
+                    log.log(Level.SEVERE, "Could not read enough bytes from file!");
+                    return null;
+                }
+                md.update(b, 0, len);
+
+                remainingBytes -= len;
+            }
 
             checksum = digestToString(md.digest());
 
@@ -143,7 +160,7 @@ public class ChecksumService {
             return null;
         } finally {
             try {
-                fc.close();
+                is.close();
             } catch (IOException e) {
                 log.log(Level.WARNING, "Could not close input Stream", e);
             }
