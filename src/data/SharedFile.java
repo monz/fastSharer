@@ -21,7 +21,6 @@ public class SharedFile implements Observable<FileMetadata> {
 
     private List<Observer<FileMetadata>> observers = new CopyOnWriteArrayList<>(); // prevents "ConcurrentModificationException" http://stackoverflow.com/questions/19197579/java-observer-pattern-how-to-remove-observers-during-updatenotify-loop-itera
     private boolean downloadActive;
-    private List<String> allChunkChecksums;
 
     public SharedFile() {
         // empty constructor is required for GSON
@@ -57,7 +56,7 @@ public class SharedFile implements Observable<FileMetadata> {
         return metadata.getChecksum();
     }
 
-    public boolean isLocal() {
+    synchronized public boolean isLocal() {
         boolean isLocal;
         int expectedChunkCount = Chunk.getChunkCount(metadata.getFileSize());
         int actualChunkCount = metadata.getChunks().size();
@@ -101,7 +100,7 @@ public class SharedFile implements Observable<FileMetadata> {
         }
     }
 
-    public List<Chunk> getChunksToDownload() {
+    synchronized public List<Chunk> getChunksToDownload() {
         if (metadata.getChunks() == null || isLocal()) {
             return Collections.emptyList();
         }
