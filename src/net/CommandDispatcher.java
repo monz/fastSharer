@@ -2,23 +2,17 @@ package net;
 
 import com.google.gson.reflect.TypeToken;
 import data.SharedFile;
+import local.ServiceLocator;
+import local.SharedFileService;
 import net.data.DownloadRequest;
 import net.data.DownloadRequestResult;
 import net.data.ShareCommand;
-import net.decl.Worker;
-import net.impl.DownloadRequestWorker;
-import net.impl.DownloadResultWorker;
-import net.impl.SharedListWorker;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.Type;
 import java.net.Socket;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
@@ -26,62 +20,53 @@ import java.util.regex.Pattern;
 
 public class CommandDispatcher {
     private static final Logger log = Logger.getLogger(CommandDispatcher.class.getName());
-    private ExecutorService executor;
-    private BlockingDeque<Socket> queue;
-    private Thread serve;
+    private static final ShareService SHARE_SERVICE = (ShareService) ServiceLocator.getInstance().getService(ServiceLocator.SHARE_SERVICE);
+    private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
-    public CommandDispatcher(int workerCount) {
-        this.executor = Executors.newFixedThreadPool(workerCount);
-        this.queue = new LinkedBlockingDeque<>();
-        this.serve = new Thread(dispatcher);
+    private Socket s;
+
+    public CommandDispatcher(Socket s) {
+        this.s = s;
     }
 
-    private Runnable dispatcher = new Runnable() {
-        @Override
-        public void run() {
-            for (;;) {
-                try {
-                    Socket s = queue.take();
-                    ShareCommand cmd = readCommand(s);
-                    if (cmd == null) {
-                        log.warning("Could not read command type from message");
-                        continue;
-                    }
-                    Worker w;
-                    switch (cmd.getCmd()) {
-                        case DOWNLOAD_REQUEST:
-                            w = new DownloadRequestWorker(cmd.getData());
-                            break;
-                        case DOWNLOAD_REQUEST_RESULT:
-                            w = new DownloadResultWorker(cmd.getData());
-                            break;
-                        case PUSH_SHARE_LIST:
-                            w = new SharedListWorker(cmd.getData());
-                            break;
-                        default:
-                            log.info("Unknown command to dispatch: " + cmd.getCmd());
-                            continue;
-                    }
-                    executor.execute(w);
-                } catch (InterruptedException e) {
-                    log.log(Level.WARNING, "Taking the next client connection was interrupted.", e);
-                } catch (Exception e) {
-                    log.log(Level.SEVERE, "Ooops!", e);
+    public void dispatch() {
+        for (;;) {
+            try {
+                if (s.isClosed()) {
+                    return;
                 }
+                ShareCommand cmd = readCommand(s);
+                if (cmd == null) {
+                    log.warning("Could not read command type from message");
+                    continue;
+                }
+                switch (cmd.getCmd()) {
+                    case DOWNLOAD_REQUEST:
+                        //log.info(String.format("Received download request for file '%s'", data.get(0).getFileId()));
+                        cmd.getData().forEach(o -> SHARE_SERVICE.addUpload((DownloadRequest)o));
+                        break;
+                    case DOWNLOAD_REQUEST_RESULT:
+                        //log.info(String.format("Received download request result for file '%s'", data.get(0).getFileId()));
+                        cmd.getData().forEach(o -> SHARE_SERVICE.addDownload((DownloadRequestResult)o));
+                        break;
+                    case PUSH_SHARE_LIST:
+                        //log.info(String.format("Received remote file: %s", data.get(0).getFilename()));
+                        cmd.getData().stream().forEach(o -> SHARED_FILE_SERVICE.addRemoteFile((SharedFile)o));
+                        break;
+                    default:
+                        log.info("Unknown command to dispatch: " + cmd.getCmd());
+                        break;
+                }
+            } catch (Exception e) {
+                log.log(Level.SEVERE, "Ooops!", e);
+                try {
+                    s.close();
+                } catch (IOException e1) {
+                    e1.printStackTrace();
+                }
+                return;
             }
         }
-    };
-
-    public void start() {
-        serve.start();
-    }
-
-    public void stop() {
-        serve.interrupt();
-    }
-
-    public void add(Socket connection) {
-        queue.offer(connection);
     }
 
     private ShareCommand readCommand(Socket client) {
@@ -125,9 +110,9 @@ public class CommandDispatcher {
                 cmd = ShareCommand.deserialize(line, type);
             }
 
-            client.close();
         } catch (IOException e) {
             log.log(Level.SEVERE, "Could not received read command", e);
+            try { client.close(); } catch (IOException e1) {}
             return null;
         }
         return cmd;

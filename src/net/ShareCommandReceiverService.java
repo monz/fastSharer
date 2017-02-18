@@ -12,12 +12,10 @@ public class ShareCommandReceiverService implements Service {
     private static final Logger log = Logger.getLogger(ShareCommandReceiverService.class.getName());
     private ServerSocket s;
     private Thread receiver;
-    private int threadCount;
 
-    public ShareCommandReceiverService(int servicePort, int threadCount) throws IOException {
+    public ShareCommandReceiverService(int servicePort) throws IOException {
         this.s = new ServerSocket(servicePort);
         this.receiver = new Thread(acceptShareCommands);
-        this.threadCount = threadCount;
     }
 
     @Override
@@ -41,12 +39,12 @@ public class ShareCommandReceiverService implements Service {
     }
 
     private Runnable acceptShareCommands = () -> {
-        CommandDispatcher dispatcher = new CommandDispatcher(threadCount);
-        dispatcher.start();
         for (;;) {
             try {
                 Socket connection = s.accept();
-                dispatcher.add(connection);
+
+                CommandDispatcher dispatcher = new CommandDispatcher(connection);
+                new Thread(dispatcher::dispatch).start();
             } catch (IOException e) {
                 e.printStackTrace();
             } catch (Exception e) {

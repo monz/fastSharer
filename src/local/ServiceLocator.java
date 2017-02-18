@@ -69,7 +69,7 @@ public class ServiceLocator {
         }
 
         try {
-            services.put(SHARED_CMD_RECEIVER_SERVICE, new ShareCommandReceiverService(cmdPort, 2)); // todo: read threadCount from config
+            services.put(SHARED_CMD_RECEIVER_SERVICE, new ShareCommandReceiverService(cmdPort));
         } catch (IOException e) {
             log.log(Level.SEVERE, "Could not bind share command receiver service to port", e);
         }

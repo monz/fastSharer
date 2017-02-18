@@ -11,7 +11,6 @@ import net.decl.FailCallback;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.Charset;
@@ -90,8 +89,7 @@ public class NetworkService {
             for (String ip : ips) {
                 successfullySend = true;
                 try {
-                    s = new Socket();
-                    s.connect(new InetSocketAddress(ip, cmdPort), SOCKET_TIMEOUT);
+                    s = nodes.get(n.getId()).connect(ip, cmdPort, SOCKET_TIMEOUT);
                 } catch(SocketTimeoutException e) {
                     log.log(Level.WARNING, "Could not send command: " + cmd.serialize(serializer) + " to: " + ip, e);
                     // remove unreachable nodes
@@ -111,6 +109,7 @@ public class NetworkService {
                 try {
                     out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), PROTOCOL_CHARSET));
                     out.write(cmd.serialize(serializer));
+                    out.newLine();
                     out.flush();
                 } catch (IOException e) {
                     log.log(Level.SEVERE, "Could not send command: " + cmd.serialize(serializer) + " to: " + s.getInetAddress().getHostAddress(), e);
@@ -118,13 +117,6 @@ public class NetworkService {
                     removeNode(n);
                     successfullySend = false;
                     break;
-                } finally {
-                    try {
-                        if (s != null) {
-                            s.close();
-                        }
-                    } catch (IOException e) {
-                    }
                 }
             }
             if (!successfullySend && failCallback != null) {
