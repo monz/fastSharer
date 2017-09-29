@@ -23,10 +23,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -43,10 +40,12 @@ public class ShareService implements AddFileListener {
     private static final int DENY_DOWNLOAD = -1;
     private static final String LOCAL_NODE_ID = NETWORK_SERVICE.getLocalNodeId().toString();
     private static final String DOWNLOAD_EXTENSION = ".part";
+    private static final long RESCHEDULE_THRESHOLD = TimeUnit.MILLISECONDS.convert(15, TimeUnit.SECONDS);
 
     private ExecutorService requester;
     private ExecutorService downloader;
     private ExecutorService uploader;
+    private ScheduledExecutorService rescheduler;
     private Semaphore downloadToken;
     private Semaphore uploadToken;
 
@@ -59,6 +58,8 @@ public class ShareService implements AddFileListener {
         this.requester = Executors.newSingleThreadExecutor();
         this.downloader = Executors.newFixedThreadPool(maxConcurrentDownloads);
         this.uploader = Executors.newFixedThreadPool(maxConcurrentUploads);
+        this.rescheduler = Executors.newSingleThreadScheduledExecutor();
+        rescheduler.scheduleAtFixedRate(reschedule, 0, TimeUnit.SECONDS.toMillis(10), TimeUnit.MILLISECONDS);
         this.downloadToken = new Semaphore(maxConcurrentDownloads);
         this.uploadToken = new Semaphore(maxConcurrentUploads);
 
@@ -67,6 +68,22 @@ public class ShareService implements AddFileListener {
         this.checksumAlgorithm = checksumAlgorithm;
         this.downloadNodeRound = new AtomicInteger();
     }
+
+    private Runnable reschedule = () -> {
+        log.info("Reschedule service started");
+        long currentTime = System.currentTimeMillis();
+        SHARED_FILE_SERVICE.getAll().values().stream()
+            .forEach(sf -> sf.getActiveDownloadingChunks().stream()
+                .filter(c -> {
+                        log.info("Check reschedule threshold timeout for chunk: " + c.getChecksum() + " and is: " + (currentTime - c.getWaitSince()));
+                        return c.getWaitSince() < 0 ? false : currentTime - c.getWaitSince() > RESCHEDULE_THRESHOLD;
+                    })
+                .forEach(c -> {
+                    // reschedule chunk download for timed out chunk requests
+                    log.info("Reschedule chunk: " + c.getChecksum());
+                    downloadFail(c);
+                }));
+    };
 
     @Override
     public void addedLocalFile(SharedFile sharedFile) {
@@ -86,9 +103,9 @@ public class ShareService implements AddFileListener {
                 return;
             } else {
 
-                if (sharedFile.isLocal()){
-                    return;
-                } else if (! sharedFile.activateDownload()) {
+                if (sharedFile.isLocal() ||
+                    sharedFile.isDownloadActive() ||
+                    sharedFile.activateDownload()){
                     return;
                 }
 
@@ -205,6 +222,7 @@ public class ShareService implements AddFileListener {
 
             SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(rr.getFileId());
             Chunk chunk = sharedFile.getChunk(rr.getChunkChecksum());
+            chunk.requestAnswered();
 
             // check if download request was accepted
             if (rr.getDownloadPort() < 0) {
@@ -343,7 +361,7 @@ public class ShareService implements AddFileListener {
             ShareCommand<DownloadRequestResult> msg = new ShareCommand<>(ShareCommand.ShareCommandType.DOWNLOAD_REQUEST_RESULT);
             if (acceptUpload && chunkIsLocal) {
                 // accept
-                log.info("Accept download request: " + r.getFileId());
+                log.info("Accept download request: " + r.getChunkChecksum() + " for file: " + r.getFileId());
 
                 ServerSocket s = openRandomPort();
 

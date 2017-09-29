@@ -7,6 +7,7 @@ import local.decl.Observer;
 import local.impl.ObserverCmd;
 import net.NetworkService;
 import net.data.Pair;
+import ui.controller.ChunkDownloadProgressController;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -107,6 +108,16 @@ public class SharedFile implements Observable<FileMetadata> {
 
         return metadata.getChunks().stream()
             .filter(c -> ! c.isLocal() && ! c.isDownloadActive() && c.getChecksum() != null)
+            .collect(Collectors.toList());
+    }
+
+    synchronized public List<Chunk> getActiveDownloadingChunks() {
+        if (metadata.getChunks() == null || isLocal()) {
+            return Collections.emptyList();
+        }
+
+        return metadata.getChunks().stream()
+            .filter(c -> c.isDownloadActive())
             .collect(Collectors.toList());
     }
 

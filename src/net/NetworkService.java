@@ -87,7 +87,6 @@ public class NetworkService {
             boolean successfullySend = false;
             // establish tcp connection
             for (String ip : ips) {
-                successfullySend = true;
                 try {
                     s = nodes.get(n.getId()).connect(ip, cmdPort, SOCKET_TIMEOUT);
                 } catch(SocketTimeoutException e) {
@@ -105,12 +104,15 @@ public class NetworkService {
                 }
 
                 // send share command
-                log.info("Send cmd: '" + cmd.serialize(serializer) + "' to IP: " + s.getInetAddress().getHostAddress());
+                log.fine("Send cmd: '" + cmd.serialize(serializer) + "' to IP: " + s.getInetAddress().getHostAddress());
+                log.info("Send cmd: '<cmdNotHere>' to IP: " + s.getInetAddress().getHostAddress());
                 try {
                     out = new BufferedWriter(new OutputStreamWriter(s.getOutputStream(), PROTOCOL_CHARSET));
                     out.write(cmd.serialize(serializer));
                     out.newLine();
                     out.flush();
+                    successfullySend = true;
+                    log.fine("Command was actually sent!");
                 } catch (IOException e) {
                     log.log(Level.SEVERE, "Could not send command: " + cmd.serialize(serializer) + " to: " + s.getInetAddress().getHostAddress(), e);
                     // remove unreachable nodes

@@ -16,6 +16,7 @@ public class Chunk {
     private String fileId;
     private boolean isLocal = false;
     private boolean downloadActive = false;
+    private long waitSince = -1;
 
     public Chunk() {
         // empty constructor required for GSON
@@ -50,6 +51,7 @@ public class Chunk {
         } else {
             downloadActive = true;
             success = true;
+            waitSince = System.currentTimeMillis();
         }
         return success;
     }
@@ -59,10 +61,15 @@ public class Chunk {
         if (downloadActive) {
             downloadActive = false;
             success = true;
+            waitSince = -1;
         } else {
             success = false;
         }
         return success;
+    }
+
+    synchronized public long getWaitSince() {
+        return waitSince;
     }
 
     synchronized public boolean isDownloadActive() {
@@ -121,5 +128,9 @@ public class Chunk {
 
     synchronized public boolean hasChecksum() {
         return checksum != null && ! checksum.equals("");
+    }
+
+    synchronized public void requestAnswered() {
+        waitSince = -1;
     }
 }

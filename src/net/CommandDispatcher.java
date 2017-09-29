@@ -24,6 +24,7 @@ public class CommandDispatcher {
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
     private Socket s;
+    private BufferedReader r;
 
     public CommandDispatcher(Socket s) {
         this.s = s;
@@ -33,6 +34,7 @@ public class CommandDispatcher {
         for (;;) {
             try {
                 if (s.isClosed()) {
+                    log.info("Connection was closed, nothing to do");
                     return;
                 }
                 ShareCommand cmd = readCommand(s);
@@ -42,7 +44,7 @@ public class CommandDispatcher {
                 }
                 switch (cmd.getCmd()) {
                     case DOWNLOAD_REQUEST:
-                        //log.info(String.format("Received download request for file '%s'", data.get(0).getFileId()));
+                        log.fine("Received download request: " + ((DownloadRequest)cmd.getData().get(0)).getChunkChecksum());
                         cmd.getData().forEach(o -> SHARE_SERVICE.addUpload((DownloadRequest)o));
                         break;
                     case DOWNLOAD_REQUEST_RESULT:
@@ -72,10 +74,13 @@ public class CommandDispatcher {
     private ShareCommand readCommand(Socket client) {
         ShareCommand cmd;
         try {
-            BufferedReader r = new BufferedReader(new InputStreamReader(client.getInputStream(), NetworkService.PROTOCOL_CHARSET));
+            if (r == null) {
+                r = new BufferedReader(new InputStreamReader(client.getInputStream(), NetworkService.PROTOCOL_CHARSET));
+            }
             String line = r.readLine();
 
-            log.info("CommandRead: " + line);
+            log.fine("CommandRead: " + line);
+            log.info("CommandRead: <cmdNotHere>");
 
             Pattern p = Pattern.compile("\"cmd\":\"(\\w*)\"");
             Matcher m = p.matcher(line);
