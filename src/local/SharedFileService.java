@@ -71,7 +71,7 @@ public class SharedFileService {
     synchronized public void addRemoteFile(SharedFile remoteSharedFile) {
         // check whether the object is valid
         if (remoteSharedFile == null || remoteSharedFile.getMetadata() == null) {
-            log.info(String.format("Received remote file '%s' was not valid", remoteSharedFile.getFilename()));
+            log.info("Received remote file was not valid");
             return;
         }
 
@@ -85,7 +85,7 @@ public class SharedFileService {
         log.info(String.format("Added remote file: '%s' to shared files", remoteSharedFile.getFilename()));
 
         // set file path
-        remoteSharedFile.setFilePath(Paths.get(downloadDirectory, remoteSharedFile.getFilename()).toString());
+        remoteSharedFile.setFilePath(Paths.get(downloadDirectory, remoteSharedFile.getMetadata().getRelativePath()).toString());
 
         // add to shared files map, if exists update shared file
         SharedFile updatedSharedFile = sharedFiles.merge(remoteSharedFile.getFileId(), remoteSharedFile, (sf1, sf2) -> {

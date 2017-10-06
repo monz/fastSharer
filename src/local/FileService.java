@@ -20,6 +20,8 @@ import data.FileMetadata;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,27 +31,48 @@ public class FileService {
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
     private static final ChecksumService CHUNK_SUM_SERVICE = (ChecksumService) ServiceLocator.getInstance().getService(ServiceLocator.CHECKSUM_SERVICE);
 
-    public void handleDroppedPaths(List<File> fileList) {
-        for (File file : fileList) {
-            log.info("Dropped file: " + file.getName());
+    class SharedFileVisitor extends SimpleFileVisitor<Path> {
+        private Path base;
 
-            // check if file/directory exists
+        protected SharedFileVisitor(File path) {
+            this.base = Paths.get(path.getParent());
+        }
+
+        @Override
+        public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
+            return super.preVisitDirectory(path, basicFileAttributes);
+        }
+
+        @Override
+        public FileVisitResult visitFile(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
+            handleFile(path.toFile(), base.relativize(path));
+            return super.visitFile(path, basicFileAttributes);
+        }
+
+        @Override
+        public FileVisitResult visitFileFailed(Path path, IOException e) throws IOException {
+            log.log(Level.SEVERE, "File: '" + path + "' could not be visited!", e);
+            return super.visitFileFailed(path, e);
+        }
+
+        private void handleFile(File file, Path relativePath) {
+            // check if file exists
             if ( ! file.exists() ) {
                 log.warning("File '" + file.getAbsolutePath() + "' does not exist.");
-                continue;
+                return;
             }
 
             if (SHARED_FILE_SERVICE.isFileShared(file)) {
                 log.info("File was not added, maybe already in list.");
-                continue;
+                return;
             }
 
             FileMetadata metadata;
             try {
-                 metadata = new FileMetadata(file.getAbsolutePath());
+                metadata = new FileMetadata(file.getAbsolutePath(), relativePath.toString());
             } catch (IOException e) {
                 log.log(Level.WARNING, "Could not extract file metadata", e);
-                continue;
+                return;
             }
 
             // todo: instead of push objects to xService use events and listeners
@@ -58,6 +81,24 @@ public class FileService {
 
             // start chunk checksum calculation
             CHUNK_SUM_SERVICE.setChecksums(metadata.getChunks());
+        }
+    }
+
+    public void handleDroppedPaths(List<File> pathList) {
+        for (File path : pathList) {
+            log.info("Dropped path: " + path.getAbsolutePath());
+
+            if (path.isFile() || path.isDirectory()) {
+                // walk path
+                SharedFileVisitor pathVisitor = new SharedFileVisitor(path);
+                try {
+                    Files.walkFileTree(Paths.get(path.getAbsolutePath()), pathVisitor);
+                } catch (IOException e) {
+                    log.log(Level.SEVERE, "Could not walk directory!", e);
+                }
+            } else {
+                log.severe("Dropped path:" + path.getAbsolutePath() + " is neither a file nor a directory, get skipped!");
+            }
         }
     }
 }

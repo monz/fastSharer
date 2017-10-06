@@ -30,16 +30,22 @@ public class FileMetadata {
     @Expose private String checksum;
     @Expose private String fileName;
     @Expose private List<Chunk> chunks;
+    @Expose private String relativePath;
 
     private String filePath;
 
     public FileMetadata(String filePath) throws IOException {
-        this(UUID.randomUUID().toString(), filePath);
+        this(UUID.randomUUID().toString(), filePath, "");
     }
 
-    private FileMetadata(String fileId, String filePath) throws IOException {
+    public FileMetadata(String filePath, String relativePath) throws IOException {
+        this(UUID.randomUUID().toString(), filePath, relativePath);
+    }
+
+    private FileMetadata(String fileId, String filePath, String relativePath) throws IOException {
         this.fileId = fileId;
         this.filePath = filePath;
+        this.relativePath = relativePath;
         this.fileName = Paths.get(filePath).getFileName().toString();
         this.fileSize = Files.size(Paths.get(filePath));
         this.chunks = Chunk.getChunks(fileId, fileSize);
@@ -85,5 +91,9 @@ public class FileMetadata {
 
     synchronized public boolean hasChecksum() {
         return checksum != null && ! checksum.equals("");
+    }
+
+    public String getRelativePath() {
+        return relativePath;
     }
 }

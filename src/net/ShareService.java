@@ -268,7 +268,7 @@ public class ShareService implements AddFileListener {
             try {
                 String checksum = receiveData(server, rr.getFileId(), rr.getChunkChecksum());
 
-                if (checksum.equals(rr.getChunkChecksum())) {
+                if (checksum != null && checksum.equals(rr.getChunkChecksum())) {
                     // finish download success
                     downloadSuccess(sharedFile, chunk);
                 } else {
@@ -328,6 +328,17 @@ public class ShareService implements AddFileListener {
     private String receiveData(Socket server, String fileId, String chunkChecksum) throws IOException {
         SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(fileId);
         Chunk chunk = sharedFile.getChunk(chunkChecksum);
+
+        // create directory structure
+        File path = Paths.get(sharedFile.getFilePath()).getParent().toFile();
+        if (! path.exists()) {
+            if (path.mkdirs()) {
+                log.fine("Created path: '" + path + "'");
+            } else {
+                log.severe("Could not create path: '" + path + "'");
+                return null;
+            }
+        }
 
         RandomAccessFile outputFile = new RandomAccessFile(sharedFile.getFilePath() + DOWNLOAD_EXTENSION, "rw");
 
