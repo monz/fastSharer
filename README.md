@@ -6,7 +6,7 @@ No setup of any server is required. Just start the application and start sharing
 Happy sharing.
 
 ## Implemented
-- share files via dropping them into the dropping area
+- share files and directories by dropping them into the dropping area
 - discovery of other sharing nodes
 - shared files will be transmitted in chunks which are loaded from available nodes to use all available network capacity
 - calculated metadata for shared files can be saved/loaded (\<user.home\>/.sharer)
@@ -14,7 +14,6 @@ Happy sharing.
 ## Known Issues
 - GUI is not that fancy yet
 - does work only on the same network segment - broadcast domain
-- directories are not supported yet
 - ...
 
 ## Dependencies
