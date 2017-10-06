@@ -85,7 +85,7 @@ public class SharedFileService {
         log.info(String.format("Added remote file: '%s' to shared files", remoteSharedFile.getFilename()));
 
         // set file path
-        remoteSharedFile.setFilePath(Paths.get(downloadDirectory, remoteSharedFile.getMetadata().getRelativePath()).toString());
+        remoteSharedFile.setFilePath(Paths.get(downloadDirectory, remoteSharedFile.getMetadata().getRelativePath().split("[/\\\\]")).toString());
 
         // add to shared files map, if exists update shared file
         SharedFile updatedSharedFile = sharedFiles.merge(remoteSharedFile.getFileId(), remoteSharedFile, (sf1, sf2) -> {
