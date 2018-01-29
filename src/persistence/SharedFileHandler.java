@@ -83,7 +83,7 @@ public class SharedFileHandler {
 
         sharedFile = deserialize(line);
         sharedFile.resetReplicaNodes();
-        sharedFile.addReplicaNode(LOCAL_NODE_ID, sharedFile.getAllChunkChecksums());
+        sharedFile.addReplicaNode(LOCAL_NODE_ID, sharedFile.getAllChunkChecksums(), true);
 
         in.close();
         log.info("Loaded shared file: " + sharerFile.getFileName());

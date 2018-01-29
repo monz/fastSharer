@@ -48,7 +48,7 @@ public class Node {
             return;
         }
         // remove duplicates
-        newNodeIps.removeAll(newNodeIps);
+        newNodeIps.removeAll(ips);
         if (newNodeIps.size() > 0) {
             ips.addAll(newNodeIps);
         }
@@ -63,11 +63,7 @@ public class Node {
     }
 
     synchronized public String toString() {
-        StringBuffer s = new StringBuffer();
-        s.append("IPs: ");
-        s.append(String.join(", ", ips));
-
-        return s.toString();
+        return "IPs: " + String.join(", ", ips);
     }
 
     synchronized public Socket connect(String ip, int port, int timeout) throws IOException {

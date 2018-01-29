@@ -23,6 +23,7 @@ import local.decl.Observer;
 import local.impl.ObserverCmd;
 import net.NetworkService;
 import net.data.Pair;
+import net.data.ReplicaNode;
 import ui.controller.ChunkDownloadProgressController;
 
 import java.util.*;
@@ -34,7 +35,7 @@ public class SharedFile implements Observable<FileMetadata> {
     private static final NetworkService NETWORK_SERVICE = (NetworkService) ServiceLocator.getInstance().getService(ServiceLocator.NETWORK_SERVICE);
 
     @Expose private FileMetadata metadata;
-    @Expose private Map<UUID, List<String>> replicaNodes = new HashMap<>(); // map<nodeId, list<chunkMD5>>
+    @Expose private Map<UUID, ReplicaNode> replicaNodes = new HashMap<>(); // map<nodeId, list<chunkMD5>>
 
     private List<Observer<FileMetadata>> observers = new CopyOnWriteArrayList<>(); // prevents "ConcurrentModificationException" http://stackoverflow.com/questions/19197579/java-observer-pattern-how-to-remove-observers-during-updatenotify-loop-itera
     private boolean downloadActive;
@@ -90,31 +91,37 @@ public class SharedFile implements Observable<FileMetadata> {
         return metadata.getFileId();
     }
 
-    synchronized public Map<UUID, List<String>> getReplicaNodes() {
+    synchronized public Map<UUID, ReplicaNode> getReplicaNodes() {
         return replicaNodes;
     }
 
-    synchronized public void addReplicaNode(UUID nodeId, List<String> chunkChecksums) {
+    synchronized public void addReplicaNode(UUID nodeId, ReplicaNode node) {
+        Set<String> chunkChecksums = node.getChunks();
         // ignore invalid data
         // ignore unknown nodes
         if (nodeId == null
             || chunkChecksums == null
-            || chunkChecksums.size() < 1
             || (NETWORK_SERVICE.getNode(nodeId) == null && ! NETWORK_SERVICE.getLocalNodeId().equals(nodeId))) {
             return;
         }
-        List<String> currentChecksums = replicaNodes.putIfAbsent(nodeId, chunkChecksums);
-
-        // remove null references and empty checksums
-        chunkChecksums.removeIf(s ->  s == null || s.isEmpty());
+        ReplicaNode n = replicaNodes.putIfAbsent(nodeId, node);
 
         // add only new chunk checksums
-        if (currentChecksums != null) {
+        if (n != null) {
+            Set<String> currentChecksums = n.getChunks();
+
+            // remove null references and empty checksums
+            chunkChecksums.removeIf(s ->  s == null || s.isEmpty());
+
             chunkChecksums.removeAll(currentChecksums); // remove duplicates
             if (chunkChecksums.size() > 0) {
                 currentChecksums.addAll(chunkChecksums);
             }
         }
+    }
+
+    synchronized public void addReplicaNode(UUID nodeId, List<String> chunkChecksums, boolean isComplete) {
+        addReplicaNode(nodeId, new ReplicaNode(nodeId, chunkChecksums, isComplete));
     }
 
     synchronized public List<Chunk> getChunksToDownload() {
@@ -145,7 +152,7 @@ public class SharedFile implements Observable<FileMetadata> {
     }
 
     synchronized public List<String> getChunksOfReplicaNode(UUID nodeId) {
-        return replicaNodes.get(nodeId);
+        return new ArrayList<>(replicaNodes.get(nodeId).getChunks());
     }
 
     public Chunk getChunk(String chunkChecksum) {

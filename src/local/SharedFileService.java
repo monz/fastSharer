@@ -75,15 +75,6 @@ public class SharedFileService {
             return;
         }
 
-        // check whether the file is local (already downloaded)
-        SharedFile localSharedFile = sharedFiles.get(remoteSharedFile.getFileId());
-        if (localSharedFile != null && localSharedFile.isLocal()) {
-            log.info(String.format("Received remote file '%s' was already downloaded", remoteSharedFile.getFilename()));
-            return;
-        }
-
-        log.info(String.format("Added remote file: '%s' to shared files", remoteSharedFile.getFilename()));
-
         // set file path
         remoteSharedFile.setFilePath(Paths.get(downloadDirectory, remoteSharedFile.getMetadata().getRelativePath().split("[/\\\\]")).toString());
 
@@ -106,6 +97,16 @@ public class SharedFileService {
             sf1.getMetadata().getChunks().addAll(newChunks);
             return sf1;
         });
+
+        // check whether the file is local (already downloaded)
+        // must be after the merge of replica nodes; so they can update their "complete" state properly
+        SharedFile localSharedFile = sharedFiles.get(remoteSharedFile.getFileId());
+        if (localSharedFile != null && localSharedFile.isLocal()) {
+            log.info(String.format("Received remote file '%s' was already downloaded", remoteSharedFile.getFilename()));
+            return;
+        }
+
+        log.info(String.format("Added remote file: '%s' to shared files", remoteSharedFile.getFilename()));
 
         // add fileId to not downloaded chunks
         // clean up chunks without checksum
