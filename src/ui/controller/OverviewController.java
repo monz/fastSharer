@@ -30,13 +30,22 @@ import javax.swing.*;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Document;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class OverviewController implements AddFileListener, NodeStateListener {
     // todo: hold views for overview
+    public static final String STAT_ACTIVE_CHUNKS = "STAT_ACTIVE_CHUNKS";
+    public static final String STAT_CHUNKS_TO_DOWNLOAD = "STAT_CHUNKS_TO_DOWNLOAD";
+    public static final String STAT_FILES_TO_DOWNLOAD = "STAT_FILES_TO_DOWNLOAD";
+    public static final String STAT_FILES_DOWNLOADED = "STAT_FILES_DOWNLOADED";
+    public static final String STAT_CHUNKS_WITH_CHECKSUM = "STAT_CHUNKS_WITH_CHECKSUM";
+    public static final String STAT_SHARED_FILES_WITH_CHECKSUM = "STAT_SHARED_FILES_WITH_CHECKSUM";
+
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
 
     private static final Logger log = Logger.getLogger(OverviewController.class.getName());
@@ -44,10 +53,18 @@ public class OverviewController implements AddFileListener, NodeStateListener {
     private static final DefaultListModel<String> NODE_LIST_MODEL = new DefaultListModel<>();
     private static final Document SHARER_ID_MODEL = new JTextField().getDocument();
 
+    private Map<String, Document> sharer_statistics;
+
     private static OverviewController instance;
 
     private OverviewController() {
-
+        sharer_statistics = new HashMap<>();
+        sharer_statistics.put(STAT_ACTIVE_CHUNKS, new JTextField().getDocument());
+        sharer_statistics.put(STAT_CHUNKS_TO_DOWNLOAD, new JTextField().getDocument());
+        sharer_statistics.put(STAT_FILES_TO_DOWNLOAD, new JTextField().getDocument());
+        sharer_statistics.put(STAT_FILES_DOWNLOADED, new JTextField().getDocument());
+        sharer_statistics.put(STAT_CHUNKS_WITH_CHECKSUM, new JTextField().getDocument());
+        sharer_statistics.put(STAT_SHARED_FILES_WITH_CHECKSUM, new JTextField().getDocument());
     }
 
     public static OverviewController getInstance() {
@@ -66,20 +83,35 @@ public class OverviewController implements AddFileListener, NodeStateListener {
     }
 
     public void updateSharerId(String id) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    SHARER_ID_MODEL.insertString(0, id, null);
-                } catch (BadLocationException e) {
-                    log.log(Level.WARNING, "", e);
-                }
+        SwingUtilities.invokeLater(() -> {
+            try {
+                SHARER_ID_MODEL.insertString(0, id, null);
+            } catch (BadLocationException e) {
+                log.log(Level.WARNING, "", e);
             }
         });
     }
 
     public Document getIdModel() {
         return SHARER_ID_MODEL;
+    }
+
+    public void updateSharerStatistics(Map<String, ?> statistics) {
+        SwingUtilities.invokeLater(() -> {
+            statistics.forEach((k, v) -> {
+                try {
+                    Document d = sharer_statistics.get(k);
+                    d.remove(0, d.getLength());
+                    d.insertString(0, v.toString(), null);
+                } catch (BadLocationException e) {
+                    log.log(Level.WARNING, "", e);
+                }
+            });
+        });
+    }
+
+    public Map<String, Document> getStatisticsModels() {
+        return sharer_statistics;
     }
 
     public void openSharerFile(String filePath) throws IOException {

@@ -24,7 +24,9 @@ import local.SharedFileService;
 import local.decl.AddFileListener;
 import local.impl.ObserverCmd;
 import net.data.*;
+import ui.Overview;
 import ui.controller.ChunkDownloadProgressController;
+import ui.controller.OverviewController;
 
 import java.io.*;
 import java.net.InetAddress;
@@ -36,9 +38,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.List;
-import java.util.Random;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -62,6 +62,7 @@ public class ShareService implements AddFileListener {
     private ExecutorService downloader;
     private ExecutorService uploader;
     private ScheduledExecutorService rescheduler;
+    private ScheduledExecutorService statisticsUpdater;
     private Semaphore downloadToken;
     private Semaphore uploadToken;
 
@@ -75,7 +76,9 @@ public class ShareService implements AddFileListener {
         this.downloader = Executors.newFixedThreadPool(maxConcurrentDownloads);
         this.uploader = Executors.newFixedThreadPool(maxConcurrentUploads);
         this.rescheduler = Executors.newSingleThreadScheduledExecutor();
+        this.statisticsUpdater = Executors.newSingleThreadScheduledExecutor();
         rescheduler.scheduleAtFixedRate(reschedule, 0, TimeUnit.SECONDS.toMillis(10), TimeUnit.MILLISECONDS);
+        statisticsUpdater.scheduleAtFixedRate(updateStatistics, 0, TimeUnit.SECONDS.toMillis(1), TimeUnit.MILLISECONDS);
         this.downloadToken = new Semaphore(maxConcurrentDownloads);
         this.uploadToken = new Semaphore(maxConcurrentUploads);
 
@@ -99,6 +102,33 @@ public class ShareService implements AddFileListener {
                     log.warning("Reschedule chunk: " + c.getChecksum());
                     downloadFail(c);
                 }));
+    };
+
+    private Runnable updateStatistics = () -> {
+        Map<String, Long> statistics = new HashMap<>();
+
+        long count = SHARED_FILE_SERVICE.getAll().values().stream().mapToLong(sf -> sf.getActiveDownloadingChunks().size()).sum();
+        statistics.put(OverviewController.STAT_ACTIVE_CHUNKS, count);
+        log.info(String.format("Active downloading chunks: %d", count));
+
+        count = SHARED_FILE_SERVICE.getAll().values().stream().mapToLong(sf -> sf.getChunksToDownload().size()).sum();
+        statistics.put(OverviewController.STAT_CHUNKS_TO_DOWNLOAD, count);
+        log.info(String.format("Chunks still to download: %d", count));
+
+        count = SHARED_FILE_SERVICE.getAll().values().stream().filter(SharedFile::isLocal).count();
+        statistics.put(OverviewController.STAT_FILES_TO_DOWNLOAD, (long) SHARED_FILE_SERVICE.getAll().size());
+        statistics.put(OverviewController.STAT_FILES_DOWNLOADED, count);
+        log.info(String.format("Files to download %d, files downloaded %d", SHARED_FILE_SERVICE.getAll().size(), count));
+
+        count = SHARED_FILE_SERVICE.getAll().values().stream().flatMap(sf -> sf.getMetadata().getChunks().stream()).filter(Chunk::hasChecksum).count();
+        statistics.put(OverviewController.STAT_CHUNKS_WITH_CHECKSUM, count);
+        log.info(String.format("Chunks with checksum: %d", count));
+
+        count = SHARED_FILE_SERVICE.getAll().values().stream().filter(sf -> sf.getMetadata().hasChecksum()).count();
+        statistics.put(OverviewController.STAT_SHARED_FILES_WITH_CHECKSUM, count);
+        log.info(String.format("SharedFiles with checksum: %d", count));
+
+        OverviewController.getInstance().updateSharerStatistics(statistics);
     };
 
     @Override

@@ -20,12 +20,14 @@ import ui.controller.OverviewController;
 import ui.logic.DroppedFileListener;
 
 import javax.swing.*;
+import javax.swing.text.Document;
 import java.awt.*;
 import java.awt.dnd.DropTarget;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.IOException;
+import java.util.Map;
 
 public class Overview extends JFrame {
     private static final OverviewController SHARER_CONTROLLER = OverviewController.getInstance();
@@ -57,6 +59,7 @@ public class Overview extends JFrame {
         main.add(defineDropArea());
         main.add(defineNodeList());
         main.add(defineSharedFileList());
+        main.add(defineStatisticsList());
 
         this.setLayout(new BorderLayout());
 
@@ -121,6 +124,68 @@ public class Overview extends JFrame {
         p.add(scrollPane, BorderLayout.CENTER);
 
         return p;
+    }
+
+    private JPanel defineStatisticsList() {
+        JPanel p = new JPanel(new BorderLayout(0, 10));
+        JLabel description = new JLabel("Statistics");
+        description.setHorizontalAlignment(SwingConstants.CENTER);
+
+        Map<String, Document> statistics = SHARER_CONTROLLER.getStatisticsModels();
+
+        JPanel statisticsPanel = new JPanel(new GridLayout(6, 2));
+        statisticsPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+
+        statisticsPanel.add(new JLabel("Active downloading chunks:"));
+        statisticsPanel.add(newJTextFieldWithDocument(
+            statistics.get(OverviewController.STAT_ACTIVE_CHUNKS),
+            false,
+            SwingConstants.RIGHT));
+
+        statisticsPanel.add(new JLabel("Chunks still to download:"));
+        statisticsPanel.add(newJTextFieldWithDocument(
+            statistics.get(OverviewController.STAT_CHUNKS_TO_DOWNLOAD),
+            false,
+            SwingConstants.RIGHT));
+
+        statisticsPanel.add(new JLabel("Files to download:"));
+        statisticsPanel.add(newJTextFieldWithDocument(
+            statistics.get(OverviewController.STAT_FILES_TO_DOWNLOAD),
+            false,
+            SwingConstants.RIGHT));
+
+        statisticsPanel.add(new JLabel("Files downloaded:"));
+        statisticsPanel.add(newJTextFieldWithDocument(
+            statistics.get(OverviewController.STAT_FILES_DOWNLOADED),
+            false,
+            SwingConstants.RIGHT));
+
+        statisticsPanel.add(new JLabel("Chunks with checksum:"));
+        statisticsPanel.add(newJTextFieldWithDocument(
+            statistics.get(OverviewController.STAT_CHUNKS_WITH_CHECKSUM),
+            false,
+            SwingConstants.RIGHT));
+
+        statisticsPanel.add(new JLabel("SharedFiles with checksum:"));
+        statisticsPanel.add(newJTextFieldWithDocument(
+            statistics.get(OverviewController.STAT_SHARED_FILES_WITH_CHECKSUM),
+            false,
+            SwingConstants.RIGHT));
+
+        JScrollPane scrollPane = new JScrollPane(statisticsPanel);
+
+        p.add(description, BorderLayout.NORTH);
+        p.add(scrollPane, BorderLayout.CENTER);
+
+        return p;
+    }
+
+    private JTextField newJTextFieldWithDocument(Document document, boolean isEditable, int horizontalAlignment) {
+        JTextField tf = new JTextField();
+        tf.setEditable(isEditable);
+        tf.setDocument(document);
+        tf.setHorizontalAlignment(horizontalAlignment);
+        return tf;
     }
 
     private void initMenu() {
