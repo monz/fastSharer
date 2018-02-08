@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,6 +32,11 @@ public class FileService {
     private static final Logger log = Logger.getLogger(FileService.class.getName());
     private static final SharedFileService SHARED_FILE_SERVICE = (SharedFileService) ServiceLocator.getInstance().getService(ServiceLocator.SHARED_FILE_SERVICE);
     private static final ChecksumService CHUNK_SUM_SERVICE = (ChecksumService) ServiceLocator.getInstance().getService(ServiceLocator.CHECKSUM_SERVICE);
+    private Executor executor;
+
+    public FileService() {
+        this.executor = Executors.newSingleThreadExecutor();
+    }
 
     class SharedFileVisitor extends SimpleFileVisitor<Path> {
         private Path base;
@@ -77,6 +84,8 @@ public class FileService {
 
             // todo: instead of push objects to xService use events and listeners
             // add to shared file list
+            // must be blocking, otherwise race condition with chunk_sum_service
+            // while 'filePath' information is not set, but required for checksum calculation
             SHARED_FILE_SERVICE.addLocalFile(metadata);
 
             // start chunk checksum calculation
@@ -91,11 +100,13 @@ public class FileService {
             if (path.isFile() || path.isDirectory()) {
                 // walk path
                 SharedFileVisitor pathVisitor = new SharedFileVisitor(path);
-                try {
-                    Files.walkFileTree(Paths.get(path.getAbsolutePath()), pathVisitor);
-                } catch (IOException e) {
-                    log.log(Level.SEVERE, "Could not walk directory!", e);
-                }
+                executor.execute(() -> {
+                    try {
+                        Files.walkFileTree(Paths.get(path.getAbsolutePath()), pathVisitor);
+                    } catch (IOException e) {
+                        log.log(Level.SEVERE, "Could not walk directory!", e);
+                    }
+                });
             } else {
                 log.severe("Dropped path:" + path.getAbsolutePath() + " is neither a file nor a directory, get skipped!");
             }

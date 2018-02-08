@@ -16,6 +16,7 @@
 
 package ui.controller;
 
+import data.Chunk;
 import data.FileMetadata;
 import data.SharedFile;
 import local.ServiceLocator;
@@ -39,6 +40,11 @@ public class ChunkProgressController implements Observer<FileMetadata> {
 
     @Override
     synchronized public void update(FileMetadata data, ObserverCmd cmd) {
+        // do not open dialog for files smaller than 5MB
+        if (data.getFileSize() < 5 * 1024 * 1024) {
+            return;
+        }
+
         // open dialog for shared file(one for each fileId), if not exist
         if (progressDialog == null) {
             progressDialog = new ProgressDialog(TITLE, data.getFileName(), data.getChunks().size());
@@ -46,7 +52,7 @@ public class ChunkProgressController implements Observer<FileMetadata> {
         }
 
         // update progress on GUI
-        int chunksChecksumCount = (int)data.getChunks().stream().filter(c -> c.hasChecksum()).count();
+        int chunksChecksumCount = (int)data.getChunks().stream().filter(Chunk::hasChecksum).count();
         progressDialog.update(chunksChecksumCount);
 
         // if was last chunk, close dialog

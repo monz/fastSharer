@@ -66,13 +66,16 @@ public class ChecksumService {
     private Runnable handleChunk(Chunk c) {
         return () -> {
             // calculate checksum
-            executor.execute(() -> {
-                c.setChecksum(calculateChecksum(c));
+            String checksum = calculateChecksum(c);
+            if (checksum == null || checksum.isEmpty()) {
+                log.severe(String.format("Chunk checksum calculation failed for file '%s'.", c.getFileId()));
+                return;
+            }
+            c.setChecksum(checksum);
 
-                // update metadata observers
-                SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(c.getFileId());
-                sharedFile.notifyObservers(sharedFile.getMetadata());
-            });
+            // update metadata observers
+            SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(c.getFileId());
+            sharedFile.notifyObservers(sharedFile.getMetadata());
         };
     }
 

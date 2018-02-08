@@ -92,11 +92,11 @@ public class ShareService implements AddFileListener {
             .forEach(sf -> sf.getActiveDownloadingChunks().stream()
                 .filter(c -> {
                         log.info("Check reschedule threshold timeout for chunk: " + c.getChecksum() + " and is: " + (currentTime - c.getWaitSince()));
-                        return c.getWaitSince() < 0 ? false : currentTime - c.getWaitSince() > RESCHEDULE_THRESHOLD;
+                        return c.getWaitSince() < 0 ? false : (currentTime - c.getWaitSince()) > RESCHEDULE_THRESHOLD;
                     })
                 .forEach(c -> {
                     // reschedule chunk download for timed out chunk requests
-                    log.info("Reschedule chunk: " + c.getChecksum());
+                    log.warning("Reschedule chunk: " + c.getChecksum());
                     downloadFail(c);
                 }));
     };
@@ -142,6 +142,8 @@ public class ShareService implements AddFileListener {
             }
         } else if (sharedFile.isDownloadActive()) {
             // download already active
+            log.log(Level.INFO, String.format("Download of file '%s' already active!", sharedFile.getFilename()));
+            log.log(Level.INFO, String.format("Missing chunks for active file download: %d", sharedFile.getChunksToDownload().size()));
             return;
         } else {
             sharedFile.activateDownload();
@@ -181,13 +183,23 @@ public class ShareService implements AddFileListener {
     private Runnable requestDownload() {
         return () -> {
             List<SharedFile> sfs = SHARED_FILE_SERVICE.getNotLocal();
+            if (sfs.isEmpty()) {
+                log.warning("No chunks to download, but files are not local yet, waiting for more information!");
+                downloadFail(null);
+                return;
+            }
 
             SharedFile sharedFile = sfs.get(new Random().nextInt(sfs.size()));
             log.info(String.format("Remaining chunks to download: %d", sharedFile.getChunksToDownload().size()));
 
             // take download token (blocking)
             try {
-                downloadToken.acquire();
+                boolean acquired = downloadToken.tryAcquire(10, TimeUnit.SECONDS);
+                if (!acquired) {
+                    log.warning("Download token acquire timed out!");
+                    downloadFail(null);
+                    return;
+                }
             } catch (InterruptedException e) {
                 log.log(Level.WARNING, "Request download was interrupted", e);
                 return;
@@ -199,11 +211,6 @@ public class ShareService implements AddFileListener {
             if (downloadInfo == null) {
                 log.info("Choose next chunk to download failed");
                 downloadFail(null);
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
                 return;
             }
 
