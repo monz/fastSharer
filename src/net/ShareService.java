@@ -109,24 +109,24 @@ public class ShareService implements AddFileListener {
 
         long count = SHARED_FILE_SERVICE.getAll().values().stream().mapToLong(sf -> sf.getActiveDownloadingChunks().size()).sum();
         statistics.put(OverviewController.STAT_ACTIVE_CHUNKS, count);
-        log.info(String.format("Active downloading chunks: %d", count));
+        log.fine(String.format("Active downloading chunks: %d", count));
 
         count = SHARED_FILE_SERVICE.getAll().values().stream().mapToLong(sf -> sf.getChunksToDownload().size()).sum();
         statistics.put(OverviewController.STAT_CHUNKS_TO_DOWNLOAD, count);
-        log.info(String.format("Chunks still to download: %d", count));
+        log.fine(String.format("Chunks still to download: %d", count));
 
         count = SHARED_FILE_SERVICE.getAll().values().stream().filter(SharedFile::isLocal).count();
         statistics.put(OverviewController.STAT_FILES_TO_DOWNLOAD, (long) SHARED_FILE_SERVICE.getAll().size());
         statistics.put(OverviewController.STAT_FILES_DOWNLOADED, count);
-        log.info(String.format("Files to download %d, files downloaded %d", SHARED_FILE_SERVICE.getAll().size(), count));
+        log.fine(String.format("Files to download %d, files downloaded %d", SHARED_FILE_SERVICE.getAll().size(), count));
 
         count = SHARED_FILE_SERVICE.getAll().values().stream().flatMap(sf -> sf.getMetadata().getChunks().stream()).filter(Chunk::hasChecksum).count();
         statistics.put(OverviewController.STAT_CHUNKS_WITH_CHECKSUM, count);
-        log.info(String.format("Chunks with checksum: %d", count));
+        log.fine(String.format("Chunks with checksum: %d", count));
 
         count = SHARED_FILE_SERVICE.getAll().values().stream().filter(sf -> sf.getMetadata().hasChecksum()).count();
         statistics.put(OverviewController.STAT_SHARED_FILES_WITH_CHECKSUM, count);
-        log.info(String.format("SharedFiles with checksum: %d", count));
+        log.fine(String.format("SharedFiles with checksum: %d", count));
 
         OverviewController.getInstance().updateSharerStatistics(statistics);
     };

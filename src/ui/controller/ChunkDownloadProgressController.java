@@ -40,6 +40,11 @@ public class ChunkDownloadProgressController implements Observer<FileMetadata> {
 
     @Override
     synchronized public void update(FileMetadata data, ObserverCmd cmd) {
+        // do not open dialog for files smaller than 5MB
+        if (data.getFileSize() < 5 * 1024 * 1024) {
+            return;
+        }
+
         // open dialog for shared file(one for each fileId), if not exist
         if (progressDialog == null) {
             progressDialog = new ProgressDialog(TITLE, data.getFileName(), Chunk.getChunkCount(data.getFileSize()));

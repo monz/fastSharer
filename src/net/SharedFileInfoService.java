@@ -56,7 +56,7 @@ public class SharedFileInfoService implements Service {
         try {
             Map<UUID, Node> nodes =  NETWORK_SERVICE.getAllNodes();
 
-            SHARED_FILE_SERVICE.getAll().values().forEach(sf -> {
+            SHARED_FILE_SERVICE.getAll().values().parallelStream().forEach(sf -> {
                 nodes.forEach((id, node) -> {
                     ReplicaNode replicaNode = sf.getReplicaNodes().get(id);
 
@@ -75,7 +75,7 @@ public class SharedFileInfoService implements Service {
                         msg.addData(sf);
 
                         NETWORK_SERVICE.sendCommand(msg, node);
-                    } else if (sf.isLocal() && !replicaNode.isStopSharedInfo()) {
+                    } else if (sf.getMetadata().hasChecksum() && !replicaNode.isStopSharedInfo()) {
                         log.fine("Send 'complete' state message to replica nodes");
                         // only send complete message once
                         replicaNode.setStopSharedInfo(true);
@@ -84,7 +84,7 @@ public class SharedFileInfoService implements Service {
                         ShareCommand<SharedFile> msg = new ShareCommand<>(ShareCommand.ShareCommandType.PUSH_SHARE_LIST);
 
                         // send local node state to replica nodes
-                        sf.addReplicaNode(NETWORK_SERVICE.getLocalNodeId(), Collections.EMPTY_LIST, sf.isLocal());
+                        sf.addReplicaNode(NETWORK_SERVICE.getLocalNodeId(), Collections.EMPTY_LIST, sf.getMetadata().hasChecksum());
 
                         msg.addData(sf);
 
