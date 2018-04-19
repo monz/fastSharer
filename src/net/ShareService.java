@@ -215,9 +215,10 @@ public class ShareService implements AddFileListener {
             List<SharedFile> sfs = SHARED_FILE_SERVICE.getNotLocal();
             if (sfs.isEmpty()) {
                 log.warning("No chunks to download, but files are not local yet, waiting for more information!");
-                downloadFail(null);
+                // there is no token to release
+                downloadFail(null, false, false);
                 try {
-                    Thread.sleep(100);
+                    Thread.sleep(500);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
@@ -232,7 +233,8 @@ public class ShareService implements AddFileListener {
                 boolean acquired = downloadToken.tryAcquire(10, TimeUnit.SECONDS);
                 if (!acquired) {
                     log.warning("Download token acquire timed out!");
-                    downloadFail(null);
+                    // there is no token to release
+                    downloadFail(null, false, false);
                     return;
                 }
             } catch (InterruptedException e) {
@@ -258,7 +260,7 @@ public class ShareService implements AddFileListener {
             Chunk chunk = downloadInfo.getValue();
             if (!chunk.activateDownload()) {
                 log.info(String.format("Download request of chunk %s canceled, already downloading", chunk.getChecksum()));
-                downloadFail(chunk, false);
+                downloadFail(chunk, false, true);
                 return;
             }
 
@@ -291,6 +293,11 @@ public class ShareService implements AddFileListener {
             if (rr.getDownloadPort() < 0) {
                 log.warning(String.format("Download request of chunk %s was not accepted", rr.getChunkChecksum()));
                 downloadFail(chunk);
+                try {
+                    Thread.sleep(500);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 return;
             }
 
@@ -355,7 +362,7 @@ public class ShareService implements AddFileListener {
         sharedFile.notifyObservers(sharedFile.getMetadata(), ObserverCmd.UPDATE);
     }
 
-    private void downloadFail(Chunk chunk, boolean deactivate) {
+    private void downloadFail(Chunk chunk, boolean deactivate, boolean releaseToken) {
         log.info("failed download");
         if (chunk != null && deactivate) {
             log.warning(String.format("Download of chunk %s of file %s failed", chunk.getChecksum(), chunk.getFileId()));
@@ -365,11 +372,13 @@ public class ShareService implements AddFileListener {
         log.info("reschedule download");
         requester.execute(requestDownload());
 
-        downloadToken.release();
+        if (releaseToken) {
+            downloadToken.release();
+        }
     }
 
     private void downloadFail(Chunk chunk) {
-        downloadFail(chunk, true);
+        downloadFail(chunk, true, true);
     }
 
     private void uploadSuccess() {
