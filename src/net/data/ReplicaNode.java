@@ -60,4 +60,14 @@ public class ReplicaNode {
     public boolean isStopSharedInfo() {
         return stopSharedInfo;
     }
+
+    @Override
+    public String toString() {
+        return "ReplicaNode{" +
+            "id=" + id +
+            ", chunks=" + chunks +
+            ", isComplete=" + isComplete +
+            ", stopSharedInfo=" + stopSharedInfo +
+            '}';
+    }
 }
