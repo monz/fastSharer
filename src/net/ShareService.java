@@ -241,6 +241,11 @@ public class ShareService implements AddFileListener {
             if (downloadInfo == null) {
                 log.info("Choose next chunk to download failed");
                 downloadFail(null);
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 return;
             }
 
@@ -362,6 +367,14 @@ public class ShareService implements AddFileListener {
         downloadFail(chunk, true);
     }
 
+    private void uploadSuccess() {
+        uploadToken.release();
+    }
+
+    private void uploadFail() {
+        uploadToken.release();
+    }
+
     private String receiveData(Socket server, String fileId, String chunkChecksum) throws IOException {
         SharedFile sharedFile = SHARED_FILE_SERVICE.getFile(fileId);
         Chunk chunk = sharedFile.getChunk(chunkChecksum);
@@ -427,7 +440,14 @@ public class ShareService implements AddFileListener {
                 // accept
                 log.info("Accept download request: " + r.getChunkChecksum() + " for file: " + r.getFileId());
 
-                ServerSocket s = openRandomPort();
+                ServerSocket s;
+                try {
+                    s = openRandomPort();
+                } catch (IOException e) {
+                    log.log(Level.SEVERE, "Could not open socket for receiving data.", e);
+                    uploadFail();
+                    return;
+                }
 
                 // send upload decision
                 msg.addData(new DownloadRequestResult(
@@ -455,6 +475,8 @@ public class ShareService implements AddFileListener {
                     // close network connection
                     try { s.close(); } catch (IOException e) { e.printStackTrace(); }
                 }
+                // release upload token
+                uploadSuccess();
             } else {
                 // deny
                 log.info("Deny scheduleDownloadRequest request: " + r.getFileId());
@@ -463,12 +485,13 @@ public class ShareService implements AddFileListener {
                 msg.addData(new DownloadRequestResult(
                     r.getFileId(), LOCAL_NODE_ID, r.getChunkChecksum(), DENY_DOWNLOAD));
                 NETWORK_SERVICE.sendCommand(msg, NETWORK_SERVICE.getNode(UUID.fromString(r.getNodeId())));
-                // do not release upload token, did not get one
-                return;
+                if (acceptUpload) {
+                    // release upload token
+                    uploadFail();
+                } else {
+                    // do not release upload token, did not get one
+                }
             }
-
-            // release upload token
-            uploadToken.release();
         };
     }
 
@@ -507,16 +530,11 @@ public class ShareService implements AddFileListener {
         bis.close();
     }
 
-    private ServerSocket openRandomPort() {
-        try {
-            ServerSocket s = new ServerSocket(0); // choose random port
-            s.setSoTimeout(SOCKET_TIMEOUT);
+    private ServerSocket openRandomPort() throws IOException {
+        ServerSocket s = new ServerSocket(0); // choose random port
+        s.setSoTimeout(SOCKET_TIMEOUT);
 
-            return s;
-        } catch (IOException e) {
-            log.log(Level.SEVERE, "Could not open socket for receiving data.", e);
-            return null;
-        }
+        return s;
     }
 
     private boolean isFileDownloadedCorrectly(SharedFile sharedFile) {
