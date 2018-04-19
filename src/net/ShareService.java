@@ -150,10 +150,10 @@ public class ShareService implements AddFileListener {
             } else {
 
                 if (sharedFile.isLocal() ||
-                    sharedFile.isDownloadActive() ||
-                    sharedFile.activateDownload()){
+                    sharedFile.isDownloadActive()){
                     return;
                 }
+                sharedFile.activateDownload();
 
                 if (isFileDownloadedCorrectly(sharedFile)) {
                     sharedFile.deactivateDownload();
@@ -216,6 +216,11 @@ public class ShareService implements AddFileListener {
             if (sfs.isEmpty()) {
                 log.warning("No chunks to download, but files are not local yet, waiting for more information!");
                 downloadFail(null);
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 return;
             }
 
